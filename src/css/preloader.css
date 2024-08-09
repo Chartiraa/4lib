@@ -1,0 +1,45 @@
+/* Preloader bileşeni stil */
+.preloader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #fff;
+    z-index: 9999; /* Diğer içeriklerin önünde */
+    animation: fadeOut 0.18s forwards 2s; /* 3 saniye sonra çıkış animasyonu başlayacak, 0.5 saniyede kaybolacak */
+}
+
+/* Logo stil */
+.preloader-logo {
+    width: 220px;
+    opacity: 0;
+    animation: fillOpacity 2s forwards;
+}
+
+/* Opasitenin yukarıdan aşağıya artması için animasyon */
+@keyframes fillOpacity {
+    0% {
+        opacity: 0;
+        clip-path: inset(100% 0 0 0);
+    }
+    100% {
+        opacity: 1;
+        clip-path: inset(0% 0 0 0);
+    }
+}
+
+/* Preloader'ın yukarı doğru hızlı kaybolması için animasyon */
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-100%);
+    }
+}
