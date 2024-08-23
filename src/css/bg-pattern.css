@@ -1,0 +1,53 @@
+.bg-pattern-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-pattern {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(
+            transparent,
+            transparent 17px,
+            #3CA9E8 17px,
+            #3CA9E8 25.5px,
+            transparent 25.5px,
+            transparent 34px,
+            #3CA9E8 34px,
+            #3CA9E8 68px,
+            transparent 68px,
+            transparent 76.5px,
+            #3CA9E8 76.5px,
+            #3CA9E8 85px,
+            transparent 85px,
+            transparent 136px
+        ),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 17px,
+            #3CA9E8 17px,
+            #3CA9E8 25.5px,
+            transparent 25.5px,
+            transparent 34px,
+            #3CA9E8 34px,
+            #3CA9E8 68px,
+            transparent 68px,
+            transparent 76.5px,
+            #3CA9E8 76.5px,
+            #3CA9E8 85px,
+            transparent 85px,
+            transparent 136px
+        );
+    background-color: rgba(255, 255, 255, 0.3); /* Karartılmış arka plan rengi */
+    background-blend-mode: multiply; /* Karartma efekti için blend mode */
+    z-index: 1;
+}
+
+.content {
+    position: relative;
+    z-index: 2;
+}

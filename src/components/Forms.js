@@ -95,7 +95,7 @@ export const TableSettings = () => {
             <Col className="mb-3">
               <Form.Group id="tableName">
                 <Form.Label>Masa Adı</Form.Label>
-                <Form.Control ref={tableName} required type="text" placeholder="Masa adını giriniz." />
+                <Form.Control ref={tableName} required type="text" placeholder="Lütfen boşluk bırakmadan yazınız!" />
               </Form.Group>
             </Col>
           </Row>

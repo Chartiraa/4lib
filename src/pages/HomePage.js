@@ -4,9 +4,17 @@ import { Routes } from "../routes";
 
 // pages
 
-import Menu from "./Menu";
-import Products from "./Products";
+import Menu from "./Menu1/Menu";
+import Menu2 from "./Menu2/Menu";
+import Menu3 from "./Menu3/Menu";
+import Barista from "./Barista";
+import Products from "./Menu1/Products";
+import Products2 from "./Menu2/Products";
+import Products3 from "./Menu3/Products";
+
 import DashboardOverview from "./dashboard/DashboardOverview";
+import TakeOrder from './TakeOrder';
+import Cash from './Cash';
 import Transactions from "./Transactions";
 import Settings from "./Settings";
 import BootstrapTables from "./tables/BootstrapTables";
@@ -65,7 +73,7 @@ const RouteWithSidebar = ({ component: Component }) => {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoaded(true), 1000);
+    const timer = setTimeout(() => setLoaded(true), 2000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -109,11 +117,20 @@ export default function App() {
 
       {/* pages */}
       <Route path={Routes.Dashboard.path} element={<RouteWithSidebar component={DashboardOverview} />} />
-      <Route path={Routes.Menu.path} element={<RouteWithLoader component={Menu} />} />
-      <Route path={Routes.Products.path} element={<RouteWithLoader component={Products} />} />
+      <Route path={Routes.Barista.path} element={<RouteWithSidebar component={Barista} />} />
+      <Route path={Routes.TakeOrder.path} element={<RouteWithSidebar component={TakeOrder} />} />
+      <Route path={Routes.Cash.path} element={<RouteWithSidebar component={Cash} />} />
       <Route path={Routes.Transactions.path} element={<RouteWithSidebar component={Transactions} />} />
       <Route path={Routes.Settings.path} element={<RouteWithSidebar component={Settings} />} />
       <Route path={Routes.BootstrapTables.path} element={<RouteWithSidebar component={BootstrapTables} />} />
+
+      {/* menus */}
+      <Route path={Routes.Menu.path} element={<RouteWithLoader component={Menu} />} />
+      <Route path={Routes.Menu2.path} element={<RouteWithLoader component={Menu2} />} />
+      <Route path={Routes.Menu3.path} element={<RouteWithLoader component={Menu3} />} />
+      <Route path={Routes.Products.path} element={<RouteWithLoader component={Products} />} />
+      <Route path={Routes.Products2.path} element={<RouteWithLoader component={Products2} />} />
+      <Route path={Routes.Products3.path} element={<RouteWithLoader component={Products3} />} />
 
       {/* components */}
       <Route path={Routes.Accordions.path} element={<RouteWithSidebar component={Accordion} />} />

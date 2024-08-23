@@ -1,0 +1,33 @@
+.nav-item .nav-link {
+    color: #1a1a1a !important;
+    /* Varsayılan metin rengi */
+    background-color: transparent !important;
+    /* Varsayılan arka plan rengi */
+    transition: background-color 0.3s ease, color 0.3s ease !important;
+    /* Geçiş animasyonu */
+}
+
+.nav-item .nav-link:hover {
+    background-color: #d1d1d1 !important;
+    /* Hover durumunda arka plan rengi */
+    color: #1a1a1a !important;
+    /* Hover durumunda metin rengi */
+}
+
+.nav-item.active .nav-link {
+    background-color: #c0c0c0 !important;
+    /* Active durumunda arka plan rengi */
+    color: #1a1a1a !important;
+    /* Active durumunda metin rengi */
+}
+
+.nav-item.active .nav-link:hover {
+    background-color: #b0b0b0 !important;
+    /* Hem active hem de hover durumunda arka plan rengi */
+    color: #1a1a1a !important;
+    /* Hem active hem de hover durumunda metin rengi */
+}
+
+body, h1, h2, h3, h4, h5, h6, p, ol, ul {
+    font-family: 'Montserrat', sans-serif;
+}

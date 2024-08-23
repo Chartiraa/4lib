@@ -5,6 +5,7 @@ import { faAngleDown, faAngleUp, faChartArea, faChartBar, faChartLine, faFlagUsa
 import { faAngular, faBootstrap, faReact, faVuejs } from "@fortawesome/free-brands-svg-icons";
 import { Col, Row, Card, Image, Button, ListGroup, ProgressBar } from '@themesberg/react-bootstrap';
 import { CircleChart, BarChart, SalesValueChart, SalesValueChartphone } from "./Charts";
+import { useNavigate } from "react-router-dom";
 
 import Profile1 from "../assets/img/team/profile-picture-1.jpg";
 import ProfileCover from "../assets/img/profile-cover.jpg";
@@ -63,36 +64,98 @@ export const ChoosePhotoWidget = (props) => {
 };
 
 export const TableButton = (props) => {
-  
-  const { title, setSelectedTable } = props;
+  const { title } = props;
+  const navigate = useNavigate();
+
+  const handleClick = () => {
+    const encodedTitle = encodeURIComponent(title);
+    navigate(`/takeorder/${encodedTitle}`);
+  };
 
   return (
-    <Card onClick={() => setSelectedTable(title)} style={{ cursor: "pointer" }} border="light" className="shadow-sm">
-    <Card.Body>
-      <Row className="d-flex align-items-center" style={{ height: "8rem" }}>
-        <Col className="d-flex flex-column justify-content-center text-center">
-          <h1 className="mb-1">{title}</h1>
-        </Col>
-      </Row>
-    </Card.Body>
-  </Card>
+    <Card onClick={handleClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
+      <Card.Body>
+        <Row className="d-flex align-items-center" style={{ height: "8rem" }}>
+          <Col className="d-flex flex-column justify-content-center text-center">
+            <h5 className="mb-1">{title}</h5>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
   );
 };
 
-export const MenuButton = (props) => {
-  
-  const { title, index } = props;
+export const BaristaButton = (props) => {
+
+  const onClick
 
   return (
-    <Card onClick={() => index} style={{ cursor: "pointer" }} border="light" className="shadow-sm mb-3">
-    <Card.Body>
-      <Row className="d-flex align-items-center" style={{ height: "6rem" }}>
-        <Col xl className="d-flex flex-column justify-content-center text-center">
-          <h3 className="mb-1">{title}</h3>
-        </Col>
-      </Row>
-    </Card.Body>
-  </Card>
+    <Card style={{ backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
+      <Card.Body>
+        <Row className="d-flex " style={{ height: "8rem" }}>
+          <Col className="d-flex flex-column text-center">
+            <h4 className="mb-1">{props.title}</h4>
+            <h6 className="mb-1">{props.productName}</h6>
+            <Button variant="outline-primary" size="sm">Hazırlandı</Button>
+
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export const TableButtonForPay = (props) => {
+  const { title, setSelectedTable, handleClick } = props;
+
+  const onClick = () => {
+    setSelectedTable(title);
+    handleClick();
+  };
+
+  return (
+    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
+      <Card.Body>
+        <Row className="d-flex align-items-center" style={{ height: "8rem" }}>
+          <Col className="d-flex flex-column justify-content-center text-center">
+            <h5 className="mb-1">{title}</h5>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export const CategoryButton = (props) => {
+  const { title, onClick } = props;
+
+  return (
+    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm mb-3">
+      <Card.Body>
+        <Row className="d-flex align-items-center" style={{ height: "6rem" }}>
+          <Col xl className="d-flex flex-column justify-content-center text-center">
+            <h3 className="mb-1">{title}</h3>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
+  );
+};
+
+// ProductButton Component
+export const ProductButton = (props) => {
+  const { title, onClick } = props;
+
+  return (
+    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm mb-3">
+      <Card.Body>
+        <Row className="d-flex align-items-center" style={{ height: "6rem" }}>
+          <Col xl className="d-flex flex-column justify-content-center text-center">
+            <h5 className="mb-1">{title}</h5>
+          </Col>
+        </Row>
+      </Card.Body>
+    </Card>
   );
 };
 

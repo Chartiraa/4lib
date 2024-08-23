@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faEllipsisH, faExternalLinkAlt, faTrashAlt } from '@fortawesome/free-solid-svg-icons';
-import { Col, Row, Card, Image, Button, Table, Dropdown, ProgressBar, Pagination, ButtonGroup } from '@themesberg/react-bootstrap';
+import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward } from '@fortawesome/free-solid-svg-icons';
+import { Col, Row, Card, Image, Button, Table, Dropdown, ProgressBar, ButtonGroup } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
 
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
 import commands from "../data/commands";
 
-import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrdersTableBaseTable, uploadImage } from "../data/DBFunctions";
+import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay } from "../data/DBFunctions";
 
 
 const ValueChange = ({ value, suffix }) => {
@@ -338,7 +338,7 @@ export const TablesTable = () => {
   };
 
   const TableRow = (props) => {
-    const { tableName, createdDate } = props;
+    const { tableName, lastEditDate } = props;
 
     return (
       <tr>
@@ -349,7 +349,7 @@ export const TablesTable = () => {
         </td>
         <td>
           <span className="fw-normal">
-            {createdDate}
+            {lastEditDate}
           </span>
         </td>
         <td className="d-flex align-items-center">
@@ -416,7 +416,7 @@ export const ProductsTable = ({ refresh }) => {
   };
 
   const editProductHandler = (product) => {
-    const categoryOptions = categories.map(category => 
+    const categoryOptions = categories.map(category =>
       `<option value="${category}" ${product.productCategory === category ? 'selected' : ''}>${category}</option>`
     ).join('');
 
@@ -660,24 +660,21 @@ export const CategoriesTable = (refresh) => {
   );
 };
 
-export const OrdersTableBaseTable = (props) => {
+export const Orders = (props) => {
+
+  const { tableName, refresh } = props
 
   const [orders, setOrders] = useState({});
 
   useEffect(() => {
-    getOrdersTableBaseTable().then(res => setOrders(res));
-  }, []);
+    getOrders(tableName).then(res => setOrders(res));
+  }, [refresh]);
 
   const TableRow = (props) => {
-    const { productID, productName, productCount } = props;
+    const { productID, productName, quantity } = props;
 
     return (
       <tr>
-        <td>
-          <span className="fw-normal">
-            {productID}
-          </span>
-        </td>
         <td>
           <span className="fw-normal">
             {productName}
@@ -685,16 +682,11 @@ export const OrdersTableBaseTable = (props) => {
         </td>
         <td>
           <span className="fw-normal">
-            {productCount}
+            {quantity}
           </span>
         </td>
         <td>
           <Dropdown as={ButtonGroup}>
-            <Dropdown.Toggle as={Button} split variant="link" className="text-dark m-0 p-0">
-              <span className="icon icon-sm">
-                <FontAwesomeIcon icon={faEllipsisH} className="icon-dark" />
-              </span>
-            </Dropdown.Toggle>
             <Dropdown.Menu>
               <Dropdown.Item className="text-danger">
                 <FontAwesomeIcon icon={faTrashAlt} className="me-2" /> Sil
@@ -712,21 +704,168 @@ export const OrdersTableBaseTable = (props) => {
         <Table hover className="user-table align-items-center">
           <thead>
             <tr>
-              <th className="border-bottom">Hesap ID</th>
-              <th className="border-bottom">Kullanıcı Adı</th>
-              <th className="border-bottom">Hesap Türü</th>
-              <th className="border-bottom">Oluşturulma Tarihi</th>
-              <th className="border-bottom">Action</th>
+              <th className="border-bottom">Ürün Adı</th>
+              <th className="border-bottom">Miktar</th>
+              <th className="border-bottom">Sil</th>
             </tr>
           </thead>
           <tbody>
-            {Object.keys(orders).map(key => <TableRow key={`${orders[key].productID}`} {...orders[key]} />)}
+            {Object.keys(orders).map(key => <TableRow key={key} {...orders[key]} />)}
           </tbody>
         </Table>
       </Card.Body>
     </Card>
   );
 };
+
+export const OrdersForPay = (props) => {
+
+  const { tableName, refresh, setRefresh, numpadValue, setNumpadValue } = props
+
+  const [orders, setOrders] = useState({});
+
+  useEffect(() => {
+    getOrders(tableName).then(res => setOrders(res));
+  }, [refresh]);
+
+  const payOrder = ({ orderID, productPrice }) => {
+    if (isNaN(parseInt(numpadValue))) {
+      setNumpadValue(parseInt(productPrice));
+      tempPay({ orderID, productPrice });
+    } else {
+      setNumpadValue(parseInt(numpadValue) + parseInt(productPrice));
+      tempPay({ orderID, productPrice });
+    }
+    setRefresh(refresh + 1);
+  }
+
+  const TableRow = (props) => {
+    const { productID, productName, productPrice, quantity, orderID } = props;
+
+    return (
+      <tr>
+        <td>
+          <span className="fw-normal">
+            {productName}
+          </span>
+        </td>
+        <td>
+          <span className="fw-normal">
+            {quantity}
+          </span>
+        </td>
+        <td>
+          <span className="fw-normal">
+            {productPrice}
+          </span>
+        </td>
+        <td>
+          <Button variant="outline-success" className="btn-icon-only btn-pill text-facebook" >
+            <FontAwesomeIcon icon={faCreditCard} onClick={() => payOrder({ orderID, productPrice })} />
+          </Button>
+        </td>
+      </tr>
+    );
+  };
+
+  return (
+    <Card border="light" className="table-wrapper table-responsive shadow-sm">
+      <Card.Body className="pt-0">
+        <Table hover className="user-table align-items-center">
+          <thead>
+            <tr>
+              <th className="border-bottom">Ürün Adı</th>
+              <th className="border-bottom">Miktar</th>
+              <th className="border-bottom">Fiyat</th>
+              <th className="border-bottom">Ödeme</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(orders).map(key => <TableRow key={key} {...orders[key]} orderID={key} />)}
+          </tbody>
+        </Table>
+      </Card.Body>
+    </Card>
+  );
+};
+
+export const OrdersForPaying = (props) => {
+  const { refresh, setRefresh, numpadValue, setNumpadValue, tableName } = props;
+
+  const [temp, setTemp] = useState({});
+  const [orders, setOrders] = useState({});
+
+  useEffect(() => {
+    // getTempPay ve getOrders fonksiyonlarını çağırarak verileri alıyoruz
+    getTempPay().then(tempData => {
+      setTemp(tempData);
+      getOrders(tableName).then(orderData => {
+        setOrders(orderData);
+      });
+    });
+  }, [refresh, tableName]);
+
+  // Ödeme fonksiyonu
+  const payOrder = ({productPrice, orderID}) => {
+    if (isNaN(parseInt(numpadValue))) {
+    } else {
+    setNumpadValue(parseInt(numpadValue) - parseInt(productPrice));
+    }
+    console.log(orderID);
+    delTempPay({orderID});
+    setRefresh(refresh + 1);
+  }
+
+  // TableRow bileşeni
+  const TableRow = ({ productID, productName, productPrice, quantity, orderID }) => {
+    return (
+      <tr>
+        <td><span className="fw-normal">{productName}</span></td>
+        <td><span className="fw-normal">{quantity}</span></td>
+        <td><span className="fw-normal">{productPrice}</span></td>
+        <td>
+          <Button variant="outline-success" className="btn-icon-only btn-pill text-facebook" onClick={() => payOrder({productPrice, orderID})}>
+            <FontAwesomeIcon icon={faBackward} />
+          </Button>
+        </td>
+      </tr>
+    );
+  };
+
+  // Örtüşen key'leri birleştir ve tabloya aktar
+  const mergedData = Object.keys(temp).reduce((result, key) => {
+    if (orders[key]) {
+      result[key] = {
+        ...temp[key], // temp verisini al
+        ...orders[key], // orders verisini ekle
+      };
+    }
+    return result;
+  }, {});
+
+  return (
+    <Card border="light" className="table-wrapper table-responsive shadow-sm">
+      <Card.Body className="pt-0">
+        <Table hover className="user-table align-items-center">
+          <thead>
+            <tr>
+              <th className="border-bottom">Ürün Adı</th>
+              <th className="border-bottom">Miktar</th>
+              <th className="border-bottom">Fiyat</th>
+              <th className="border-bottom">Geri Al</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.keys(mergedData).map(key => (
+              <TableRow key={key} {...mergedData[key]} orderID={key} />
+            ))}
+          </tbody>
+        </Table>
+      </Card.Body>
+    </Card>
+  );
+};
+
 
 export const CommandsTable = () => {
   const TableRow = (props) => {
