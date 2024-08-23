@@ -87,8 +87,6 @@ export const TableButton = (props) => {
 
 export const BaristaButton = (props) => {
 
-  const onClick
-
   return (
     <Card style={{ backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
       <Card.Body>
@@ -96,7 +94,7 @@ export const BaristaButton = (props) => {
           <Col className="d-flex flex-column text-center">
             <h4 className="mb-1">{props.title}</h4>
             <h6 className="mb-1">{props.productName}</h6>
-            <Button variant="outline-primary" size="sm">Hazırlandı</Button>
+            <Button onClick={props.onClick} variant="outline-primary" size="sm">Hazırlandı</Button>
 
           </Col>
         </Row>
