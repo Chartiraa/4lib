@@ -230,7 +230,7 @@ export async function getTotal(tableName) {
 }
 
 export async function setTotal(props) {
-    await set(ref(db, 'Cafe/Totals/' + props.tableName + '/' ), {
+    await set(ref(db, 'Cafe/Totals/' + props.tableName + '/'), {
         tableName: props.tableName,
         total: props.total,
         lastEditDate: formatDate()
@@ -291,7 +291,7 @@ export async function getTempPay() {
     return returnValue
 }
 
-export async function getBaristaOrders(tableName) {
+export async function getBaristaOrders() {
     var returnValue = 0
     await get(child(ref(db), "Cafe/Barista/")).then((snapshot) => {
         if (snapshot.exists()) {
