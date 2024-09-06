@@ -730,10 +730,8 @@ export const OrdersForPay = (props) => {
 
   const payOrder = ({ orderID, productPrice }) => {
     if (isNaN(parseInt(numpadValue))) {
-      setNumpadValue(parseInt(productPrice));
       tempPay({ orderID, productPrice });
     } else {
-      setNumpadValue(parseInt(numpadValue) + parseInt(productPrice));
       tempPay({ orderID, productPrice });
     }
     setRefresh(refresh + 1);
@@ -797,42 +795,15 @@ export const OrdersForPaying = (props) => {
 
   useEffect(() => {
     // getTempPay ve getOrders fonksiyonlarını çağırarak verileri alıyoruz
-    getTempPay().then(tempData => {
+    getTempPay().then((tempData) => {
       setTemp(tempData);
-      getOrders(tableName).then(orderData => {
+      getOrders(tableName).then((orderData) => {
         setOrders(orderData);
       });
     });
   }, [refresh, tableName]);
 
-  // Ödeme fonksiyonu
-  const payOrder = ({productPrice, orderID}) => {
-    if (isNaN(parseInt(numpadValue))) {
-    } else {
-    setNumpadValue(parseInt(numpadValue) - parseInt(productPrice));
-    }
-    console.log(orderID);
-    delTempPay({orderID});
-    setRefresh(refresh + 1);
-  }
-
-  // TableRow bileşeni
-  const TableRow = ({ productID, productName, productPrice, quantity, orderID }) => {
-    return (
-      <tr>
-        <td><span className="fw-normal">{productName}</span></td>
-        <td><span className="fw-normal">{quantity}</span></td>
-        <td><span className="fw-normal">{productPrice}</span></td>
-        <td>
-          <Button variant="outline-success" className="btn-icon-only btn-pill text-facebook" onClick={() => payOrder({productPrice, orderID})}>
-            <FontAwesomeIcon icon={faBackward} />
-          </Button>
-        </td>
-      </tr>
-    );
-  };
-
-  // Örtüşen key'leri birleştir ve tabloya aktar
+  // mergedData oluştur
   const mergedData = Object.keys(temp).reduce((result, key) => {
     if (orders[key]) {
       result[key] = {
@@ -842,6 +813,52 @@ export const OrdersForPaying = (props) => {
     }
     return result;
   }, {});
+
+  // Fiyatları toplayan useEffect
+  useEffect(() => {
+    const totalPrice = Object.values(mergedData).reduce(
+      (sum, { productPrice, quantity }) => sum + parseInt(productPrice) * parseInt(quantity),
+      0
+    );
+    setNumpadValue(totalPrice); // Toplam fiyatı numpadValue'ye aktar
+  }, [mergedData, setNumpadValue]);
+
+  // Ödeme fonksiyonu
+  const payOrder = ({ productPrice, orderID }) => {
+    if (!isNaN(parseInt(numpadValue))) {
+      setNumpadValue(parseInt(numpadValue) - parseInt(productPrice));
+    }
+
+    console.log(orderID);
+    delTempPay({ orderID });
+    setRefresh(refresh + 1);
+  };
+
+  // TableRow bileşeni
+  const TableRow = ({ productID, productName, productPrice, quantity, orderID }) => {
+    return (
+      <tr>
+        <td>
+          <span className="fw-normal">{productName}</span>
+        </td>
+        <td>
+          <span className="fw-normal">{quantity}</span>
+        </td>
+        <td>
+          <span className="fw-normal">{productPrice}</span>
+        </td>
+        <td>
+          <Button
+            variant="outline-success"
+            className="btn-icon-only btn-pill text-facebook"
+            onClick={() => payOrder({ productPrice, orderID })}
+          >
+            <FontAwesomeIcon icon={faBackward} />
+          </Button>
+        </td>
+      </tr>
+    );
+  };
 
   return (
     <Card border="light" className="table-wrapper table-responsive shadow-sm">
@@ -856,7 +873,7 @@ export const OrdersForPaying = (props) => {
             </tr>
           </thead>
           <tbody>
-            {Object.keys(mergedData).map(key => (
+            {Object.keys(mergedData).map((key) => (
               <TableRow key={key} {...mergedData[key]} orderID={key} />
             ))}
           </tbody>

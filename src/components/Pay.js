@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Form, Row, Col } from '@themesberg/react-bootstrap';
 
-import { getOrders, getProducts, getTotal, setTotal, editTotal, addLog, delOrders, getTempPay, delTempPay } from "../data/DBFunctions";
+import { getOrders, getProducts, getTotal, setTotal, editTotal, addLog, delOrders, getTempPay, delTempPay, setTempPay } from "../data/DBFunctions"; // setTempPay fonksiyonu eklendi
 
 import Numpad from "./Numpad";
 
@@ -66,12 +66,17 @@ export default (props) => {
             setPaid(0);
             return total;
         }
-
-
     };
 
     const onClickAll = () => {
-        setNumpadValue(remainder);
+        // Tüm ürünleri getOrders'tan alıp getTempPay'e ekle
+        Object.keys(orders).forEach(orderID => {
+            const order = orders[orderID];
+            // getTempPay'e ekleyin
+            setTemp({ orderID, ...order }); // Örneğin, setTempPay fonksiyonunu kullanarak veriyi ekleyin
+        });
+        //setNumpadValue(remainder);
+        setRefresh(refresh + 1); // Veriyi yenilemek için refresh'i güncelle
     };
 
     const onClickHalf = () => {
@@ -83,7 +88,7 @@ export default (props) => {
             .then(() => {
                 setPaid(numpadValue);
                 setRemainder(remainder - numpadValue);
-                //addLog({ tableName: tableName, action: "Kredi Kartu", amount: numpadValue })
+                addLog({ tableName: tableName, action: "Kredi Kartı", amount: numpadValue })
             });
         setNumpadValue("");
         Object.keys(mergedData).map(key => delOrders({ tableName: tableName, orderID: key }));
@@ -113,13 +118,9 @@ export default (props) => {
 
             <Form.Control ref={numpad} required value={numpadValue} placeholder="Tahsil edilecek tutarı giriniz" style={{ marginBottom: "10px", marginTop: "10px" }} />
 
-
             <Row style={{ marginBottom: "10px" }}>
                 <Col className="p-0">
                     <button onClick={onClickAll} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#198754", color: "white" }} value="Tamamı">Tamamı</button>
-                </Col>
-                <Col className="p-0">
-                    <button onClick={onClickHalf} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#0D6EFD", color: "white" }} value="Yarısı">Yarısı</button>
                 </Col>
             </Row>
 
@@ -136,3 +137,8 @@ export default (props) => {
         </>
     );
 };
+
+
+/*                <Col className="p-0">
+                    <button onClick={onClickHalf} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#0D6EFD", color: "white" }} value="Yarısı">Yarısı</button>
+                </Col> */

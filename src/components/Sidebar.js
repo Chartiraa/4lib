@@ -1,14 +1,15 @@
-
 import React, { useState } from "react";
 import SimpleBar from 'simplebar-react';
 import { useLocation } from "react-router-dom";
 import { CSSTransition } from 'react-transition-group';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faCog, faTable, faTimes, faCashRegister,faBars } from "@fortawesome/free-solid-svg-icons";
+import { faChartPie, faCog, faTable, faTimes, faCashRegister, faBars, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
 import { Nav, Badge, Image, Button, Dropdown, Accordion, Navbar } from '@themesberg/react-bootstrap';
 import { Link } from 'react-router-dom';
 
 import { Routes } from "../routes";
+import { auth } from "../firebaseConfig"; // Firebase ayar dosyanızdan doğru yolu kontrol edin
+import { signOut } from "firebase/auth"; // signOut fonksiyonunu ekliyoruz
 
 import "../css/Sidebar.css"
 
@@ -45,23 +46,23 @@ export default (props = {}) => {
 
   const NavItem = (props) => {
     const { title, link, external, target, icon, badgeText, badgeBg = "secondary", badgeColor = "primary" } = props;
-    const location = useLocation(); // React Router'dan useLocation hook'u kullanıyoruz
+    const location = useLocation();
     const { pathname } = location;
-  
+
     const navItemClassName = link === pathname ? "active nav-item my-2" : "nav-item my-2";
     const linkProps = external ? { href: link } : { as: Link, to: link };
-  
+
     return (
       <Nav.Item className={navItemClassName}>
         <Nav.Link {...linkProps} target={target}>
-          {icon && <FontAwesomeIcon icon={icon} className="sidebar-icon" style={{ color: "#1a1a1a" }}/>}
+          {icon && <FontAwesomeIcon icon={icon} className="sidebar-icon" style={{ color: "#1a1a1a" }} />}
           <span>{title}</span>
           {badgeText && <Badge pill bg={badgeBg} text={badgeColor} className="badge-md notification-count ms-2">{badgeText}</Badge>}
         </Nav.Link>
       </Nav.Item>
     );
   };
-  
+
   const NavItemTop = (props) => {
     const { title, image } = props;
 
@@ -75,14 +76,23 @@ export default (props = {}) => {
     );
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth); // Firebase üzerinden çıkış yap
+      window.location.href = Routes.Signin.path; // Çıkış yaptıktan sonra giriş sayfasına yönlendir
+    } catch (error) {
+      console.error("Logout Error:", error);
+    }
+  };
+
   return (
-    < >
+    <>
       <Navbar expand={false} collapseOnSelect variant="light" className="px-4 d-md-none" style={{ backgroundColor: "#eeeeee" }}>
         <Navbar.Brand className="me-lg-5" as={Link} to={Routes.Dashboard.path}>
-          <Image src={'https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f'} className="nav-item" alt="Leras Logo" style={{ width: '50px', height: '50px' }}/>
+          <Image src={'https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f'} className="nav-item" alt="Leras Logo" style={{ width: '50px', height: '50px' }} />
         </Navbar.Brand>
         <Navbar.Toggle as={Button} aria-controls="main-navbar" onClick={onCollapse} style={{ borderColor: "#1a1a1a" }}>
-          <FontAwesomeIcon icon={faBars} style={{ color: "#1a1a1a" }}/>
+          <FontAwesomeIcon icon={faBars} style={{ color: "#1a1a1a" }} />
         </Navbar.Toggle>
       </Navbar>
       <CSSTransition timeout={300} in={show} classNames="sidebar-transition">
@@ -108,7 +118,9 @@ export default (props = {}) => {
 
               <Dropdown.Divider className="my-2" style={{ borderColor: "#1a1a1a" }} />
 
-              {/*<Button as={Link} to={Routes.Menu.path} variant="secondary" className="upgrade-to-pro"><FontAwesomeIcon icon={faRocket} className="me-1" /> Upgrade to Pro</Button>*/}
+              <Button variant="danger" className="upgrade-to-pro" onClick={handleLogout}>
+                <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Çıkış Yap
+              </Button>
             </Nav>
           </div>
         </SimpleBar>

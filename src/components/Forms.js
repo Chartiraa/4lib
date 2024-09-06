@@ -5,75 +5,91 @@ import Swal from "sweetalert2";
 
 import { AccountsTable, TablesTable, ProductsTable, CategoriesTable } from "./Tables";
 
-import { addAccount, addTable, addProduct, addCategory, getCategories, uploadImage } from "../data/DBFunctions";
+import { fetchUsers, updateUserRoleInDB, deleteUserFromDB , addTable, addProduct, addCategory, getCategories, uploadImage } from "../data/DBFunctions";
 
 export const Users = () => {
+  const [users, setUsers] = useState([]); // Kullanıcıları tutan state
+  const [selectedRoles, setSelectedRoles] = useState({}); // Seçilen rolleri tutan state
 
-  const formAccountName = useRef(null);
-  const formAccountPassword = useRef(null);
-  const formAccountPasswordAgain = useRef(null);
-  const formAccountType = useRef(null);
+  useEffect(() => {
+    // Kullanıcıları Firebase'den çekme
+    fetchUsers((usersArray) => {
+      setUsers(usersArray);
+    });
+  }, []);
 
-  const handleClick = () => {
-    if (formAccountPassword.current.value !== formAccountPasswordAgain.current.value) {
-      alert("Sifreler aynı değil. Lütfen tekrar deneyiniz.");
-      return;
-    } else {
-      addAccount({ accountName: formAccountName.current.value, accountPassword: formAccountPassword.current.value, accountType: formAccountType.current.value }).then(() => {
-        alert("Kayıt tamamlandı.");
-        formAccountName.current.value = "";
-        formAccountPassword.current.value = "";
-        formAccountPasswordAgain.current.value = "";
-        formAccountType.current.value = "0";
-        window.location.reload();
+  // Rol değiştirildiğinde çağrılan fonksiyon
+  const handleRoleChange = (uid, newRole) => {
+    setSelectedRoles((prevState) => ({
+      ...prevState,
+      [uid]: newRole,
+    }));
+  };
+
+  // Kullanıcı rolünü güncelleme fonksiyonu
+  const updateUserRole = (uid) => {
+    const newRole = selectedRoles[uid];
+
+    // Firebase'de rolü güncelleme
+    updateUserRoleInDB(uid, newRole)
+      .then(() => {
+        alert('Kullanıcı rolü güncellendi.');
       })
-    }
+      .catch((error) => {
+        console.error('Rol güncellenirken hata oluştu:', error);
+      });
+  };
 
-  }
+  // Kullanıcıyı silme fonksiyonu
+  const deleteUser = (uid) => {
+    if (window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
+      deleteUserFromDB(uid)
+        .then(() => {
+          alert('Kullanıcı başarıyla silindi.');
+          setUsers(users.filter(user => user.uid !== uid)); // Silinen kullanıcıyı listeden çıkar
+        })
+        .catch((error) => {
+          console.error('Kullanıcı silinirken hata oluştu:', error);
+        });
+    }
+  };
 
   return (
     <Card border="light" className="bg-white shadow-sm mb-4">
       <Card.Body>
-        <h5 className="mb-4">Personel Kaydı</h5>
+        <h5 className="mb-4">Kullanıcı Rolleri</h5>
         <Form>
-          <Row>
-            <Col md={6} className="mb-3">
-              <Form.Group id="firstName">
-                <Form.Label>Kullanıcı Adı</Form.Label>
-                <Form.Control ref={formAccountName} required type="text" placeholder="Kullanıcı adını giriniz." />
-              </Form.Group>
-            </Col>
-            <Col md={6} className="mb-3">
-              <Form.Group id="gender">
-                <Form.Label>Hesap Türü</Form.Label>
-                <Form.Select ref={formAccountType} defaultValue="0">
-                  <option value="Yönetici">Yönetici</option>
-                  <option value="Kasa">Kasa</option>
-                  <option value="Garson">Garson</option>
+          {users.map((user) => (
+            <Row key={user.uid} className="align-items-center mb-3">
+              <Col md={4}>
+                <Form.Label>{user.email}</Form.Label>
+              </Col>
+              <Col md={3}>
+                <Form.Select
+                  value={selectedRoles[user.uid] || user.role}
+                  onChange={(e) => handleRoleChange(user.uid, e.target.value)}
+                >
+                  <option value="admin">Yönetici</option>
+                  <option value="cashier">Kasa</option>
+                  <option value="barista">Barista</option>
+                  <option value="waiter">Garson</option>
+                  <option value="no-role">Rol Yok</option>
                 </Form.Select>
-              </Form.Group>
-            </Col>
-          </Row>
-          <Row>
-            <Col md={6} className="mb-3">
-              <Form.Group id="firstName">
-                <Form.Label>Şifre</Form.Label>
-                <Form.Control ref={formAccountPassword} required type="password" placeholder="Şifrenizi giriniz." />
-              </Form.Group>
-            </Col>
-            <Col md={6} className="mb-3">
-              <Form.Group id="lastName">
-                <Form.Label>Şifre Tekrar</Form.Label>
-                <Form.Control ref={formAccountPasswordAgain} required type="password" placeholder="Şifrenizi tekrar giriniz." />
-              </Form.Group>
-            </Col>
-          </Row>
-          <div className="mt-3">
-            <Button variant="primary" onClick={handleClick} type="submit">Personel Kaydet</Button>
-          </div>
+              </Col>
+              <Col md={2}>
+                <Button variant="primary" onClick={() => updateUserRole(user.uid)}>
+                  Güncelle
+                </Button>
+              </Col>
+              <Col md={2}>
+                <Button variant="danger" onClick={() => deleteUser(user.uid)}>
+                  Sil
+                </Button>
+              </Col>
+            </Row>
+          ))}
         </Form>
       </Card.Body>
-      <AccountsTable />
     </Card>
   );
 };

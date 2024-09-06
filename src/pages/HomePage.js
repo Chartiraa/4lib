@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes as AppRoutes, Route } from "react-router-dom";
 import { Routes } from "../routes";
+import ProtectedRoute from "../components/ProtectedRoute";
 
 // pages
 
@@ -107,6 +108,7 @@ const RouteWithSidebar = ({ component: Component }) => {
 export default function App() {
   return (
     <AppRoutes>
+      {/* Public Routes */}
       <Route path={Routes.Signin.path} element={<RouteWithLoader component={Signin} />} />
       <Route path={Routes.Signup.path} element={<RouteWithLoader component={Signup} />} />
       <Route path={Routes.ForgotPassword.path} element={<RouteWithLoader component={ForgotPassword} />} />
@@ -115,22 +117,115 @@ export default function App() {
       <Route path={Routes.NotFound.path} element={<RouteWithLoader component={NotFoundPage} />} />
       <Route path={Routes.ServerError.path} element={<RouteWithLoader component={ServerError} />} />
 
-      {/* pages */}
-      <Route path={Routes.Dashboard.path} element={<RouteWithSidebar component={DashboardOverview} />} />
-      <Route path={Routes.Barista.path} element={<RouteWithSidebar component={Barista} />} />
-      <Route path={Routes.TakeOrder.path} element={<RouteWithSidebar component={TakeOrder} />} />
-      <Route path={Routes.Cash.path} element={<RouteWithSidebar component={Cash} />} />
-      <Route path={Routes.Transactions.path} element={<RouteWithSidebar component={Transactions} />} />
-      <Route path={Routes.Settings.path} element={<RouteWithSidebar component={Settings} />} />
-      <Route path={Routes.BootstrapTables.path} element={<RouteWithSidebar component={BootstrapTables} />} />
+{/* Protected Routes */}
+<Route
+  path={Routes.Dashboard.path}
+  element={
+    <ProtectedRoute requiredRoles={["barista","waiter", "cashier", "admin"]}>
+      <RouteWithSidebar component={DashboardOverview} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Barista.path}
+  element={
+    <ProtectedRoute requiredRoles={["barista", "cashier", "admin"]}>
+      <RouteWithSidebar component={Barista} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.TakeOrder.path}
+  element={
+    <ProtectedRoute requiredRoles={["waiter", "cashier", "admin"]}>
+      <RouteWithSidebar component={TakeOrder} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Cash.path}
+  element={
+    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
+      <RouteWithSidebar component={Cash} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Transactions.path}
+  element={
+    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
+      <RouteWithSidebar component={Transactions} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Settings.path}
+  element={
+    <ProtectedRoute requiredRoles={["admin"]}>
+      <RouteWithSidebar component={Settings} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.BootstrapTables.path}
+  element={
+    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
+      <RouteWithSidebar component={BootstrapTables} />
+    </ProtectedRoute>
+  }
+/>
 
-      {/* menus */}
-      <Route path={Routes.Menu.path} element={<RouteWithLoader component={Menu} />} />
-      <Route path={Routes.Menu2.path} element={<RouteWithLoader component={Menu2} />} />
-      <Route path={Routes.Menu3.path} element={<RouteWithLoader component={Menu3} />} />
-      <Route path={Routes.Products.path} element={<RouteWithLoader component={Products} />} />
-      <Route path={Routes.Products2.path} element={<RouteWithLoader component={Products2} />} />
-      <Route path={Routes.Products3.path} element={<RouteWithLoader component={Products3} />} />
+{/* Menü Sayfaları */}
+<Route
+  path={Routes.Menu.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Menu} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Menu2.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Menu2} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Menu3.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Menu3} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Products.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Products} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Products2.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Products2} />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path={Routes.Products3.path}
+  element={
+    <ProtectedRoute>
+      <RouteWithLoader component={Products3} />
+    </ProtectedRoute>
+  }
+/>
+
+
 
       {/* components */}
       <Route path={Routes.Accordions.path} element={<RouteWithSidebar component={Accordion} />} />
