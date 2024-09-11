@@ -13,8 +13,14 @@ export default () => {
     useEffect(() => {
         getProducts().then(res => {
             const productsArray = Object.values(res);
+
+            // Ürünleri kategori adına göre filtrele
             const filteredProducts = productsArray.filter(product => product.productCategory === decodedCategoryName);
-            setProducts(filteredProducts);
+
+            // Ürünleri sıralama anahtarına (sortOrder) göre sırala
+            const sortedProducts = filteredProducts.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
+            setProducts(sortedProducts);
         });
     }, [decodedCategoryName]);
 

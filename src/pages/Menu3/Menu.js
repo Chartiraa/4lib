@@ -5,11 +5,26 @@ import { Col, Row } from '@themesberg/react-bootstrap';
 import { MenuButton } from "./MenuButton";
 import { getCategories } from "../../data/DBFunctions";
 
-//import "../css/bg-pattern.css";
-
 export default () => {
     const [categories, setCategories] = useState([]);
     const navigate = useNavigate();
+
+    // Kategori sıralama düzeni
+    const categoryOrder = [
+        "Sıcak Kahveler",
+        "Soğuk Kahveler",
+        "Cold Chocolate",
+        "Doyurucu Sıcaklar",
+        "Soğuk Çaylar",
+        "Geleneksel",
+        "Diğer Soğuk İçecekler",
+        "Bitki Çayları",
+        "Limonatalar",
+        "Milkshake",
+        "Bubble Tea",
+        "Frozen",
+        "Soft İçecekler",
+    ];
 
     useEffect(() => {
         getCategories().then(res => {
@@ -18,7 +33,13 @@ export default () => {
                 categoryBanner: category.categoryBanner,
                 lastEditDate: category.lastEditDate
             }));
-            setCategories(categoriesArray);
+
+            // Kategorileri belirtilen sıraya göre sıralama
+            const sortedCategories = categoriesArray.sort(
+                (a, b) =>
+                    categoryOrder.indexOf(a.categoryName) - categoryOrder.indexOf(b.categoryName)
+            );
+            setCategories(sortedCategories);
         });
     }, []);
 
@@ -52,9 +73,3 @@ export default () => {
         </div>
     );
 };
-
-
-/*<div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-<img src="https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f" alt="Leras Logo" style={{ width: '100%', maxWidth: '220px' }} />
-<h1 style={{ color: "#3C2F2F", fontFamily: 'Montserrat, sans-serif' }}>Menü</h1>
-</div>*/

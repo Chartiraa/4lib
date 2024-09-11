@@ -557,11 +557,34 @@ export const CategoriesTable = (refresh) => {
 
   const [categories, setCategories] = useState({});
 
+  const categoryOrder = [
+    "Sıcak Kahveler",
+    "Soğuk Kahveler",
+    "Cold Chocolate",
+    "Doyurucu Sıcaklar",
+    "Soğuk Çaylar",
+    "Geleneksel",
+    "Diğer Soğuk İçecekler",
+    "Bitki Çayları",
+    "Limonatalar",
+    "Milkshake",
+    "Bubble Tea",
+    "Frozen",
+    "Soft İçecekler",
+  ];
+  
   useEffect(() => {
-    getCategories().then(res => {
-      setCategories(res)
+    getCategories().then((res) => {
+      const categoriesArray = Object.values(res);
+      // Kategorileri belirtilen sıraya göre sıralama
+      const sortedCategories = categoriesArray.sort(
+        (a, b) =>
+          categoryOrder.indexOf(a.categoryName) - categoryOrder.indexOf(b.categoryName)
+      );
+      setCategories(sortedCategories);
     });
   }, [refresh]);
+  
 
   const delCategoryHandler = (categoryName) => {
     delCategory(categoryName);
@@ -605,9 +628,18 @@ export const CategoriesTable = (refresh) => {
           getCategories().then(res => setCategories(res));
           Swal.fire('İşlem Başarılı', 'Kategori bilgileri düzenlendi.', 'success');
         } else {
-          editCategory({ categoryName: result.value.inputText1, categoryBanner: result.value.fileUpload });
+          uploadImage(result.value.fileUpload, result.value.inputText1).then((url) => {
+            editCategory({ categoryName: result.value.inputText1, categoryBanner: url }).then(() => {
+              Swal.fire({
+                icon: "success",
+                title: "Kategori bilgileri düzenlendi.",
+                showConfirmButton: false,
+                showConfirmButton: false,
+                timer: 1000
+              })
+            })
+          })
           getCategories().then(res => setCategories(res));
-          Swal.fire('İşlem Başarılı', 'Kategori bilgileri düzenlendi.', 'success');
         }
       }
     });
