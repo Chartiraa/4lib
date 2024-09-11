@@ -117,113 +117,22 @@ export default function App() {
       <Route path={Routes.NotFound.path} element={<RouteWithLoader component={NotFoundPage} />} />
       <Route path={Routes.ServerError.path} element={<RouteWithLoader component={ServerError} />} />
 
-{/* Protected Routes */}
-<Route
-  path={Routes.Dashboard.path}
-  element={
-    <ProtectedRoute requiredRoles={["barista","waiter", "cashier", "admin"]}>
-      <RouteWithSidebar component={DashboardOverview} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Barista.path}
-  element={
-    <ProtectedRoute requiredRoles={["barista", "cashier", "admin"]}>
-      <RouteWithSidebar component={Barista} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.TakeOrder.path}
-  element={
-    <ProtectedRoute requiredRoles={["waiter", "cashier", "admin"]}>
-      <RouteWithSidebar component={TakeOrder} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Cash.path}
-  element={
-    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
-      <RouteWithSidebar component={Cash} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Transactions.path}
-  element={
-    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
-      <RouteWithSidebar component={Transactions} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Settings.path}
-  element={
-    <ProtectedRoute requiredRoles={["admin"]}>
-      <RouteWithSidebar component={Settings} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.BootstrapTables.path}
-  element={
-    <ProtectedRoute requiredRoles={["cashier", "admin"]}>
-      <RouteWithSidebar component={BootstrapTables} />
-    </ProtectedRoute>
-  }
-/>
+      {/* Protected Routes */}
+      <Route path={Routes.Dashboard.path} element={<ProtectedRoute requiredRoles={["barista", "waiter", "cashier", "admin"]}><RouteWithSidebar component={DashboardOverview} /></ProtectedRoute>} />
+      <Route path={Routes.Barista.path} element={<ProtectedRoute requiredRoles={["barista", "cashier", "admin"]}><RouteWithSidebar component={Barista} /></ProtectedRoute>} />
+      <Route path={Routes.TakeOrder.path} element={<ProtectedRoute requiredRoles={["waiter", "cashier", "admin"]}><RouteWithSidebar component={TakeOrder} /></ProtectedRoute>} />
+      <Route path={Routes.Cash.path} element={<ProtectedRoute requiredRoles={["cashier", "admin"]}><RouteWithSidebar component={Cash} /></ProtectedRoute>} />
+      <Route path={Routes.Transactions.path} element={<ProtectedRoute requiredRoles={["cashier", "admin"]}><RouteWithSidebar component={Transactions} /></ProtectedRoute>} />
+      <Route path={Routes.Settings.path} element={<ProtectedRoute requiredRoles={["admin"]}><RouteWithSidebar component={Settings} /></ProtectedRoute>} />
+      <Route path={Routes.BootstrapTables.path} element={<ProtectedRoute requiredRoles={["cashier", "admin"]}><RouteWithSidebar component={BootstrapTables} /></ProtectedRoute>} />
 
-{/* Menü Sayfaları */}
-<Route
-  path={Routes.Menu.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Menu} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Menu2.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Menu2} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Menu3.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Menu3} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Products.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Products} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Products2.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Products2} />
-    </ProtectedRoute>
-  }
-/>
-<Route
-  path={Routes.Products3.path}
-  element={
-    <ProtectedRoute>
-      <RouteWithLoader component={Products3} />
-    </ProtectedRoute>
-  }
-/>
+      {/* Menü Sayfaları */}
+      <Route path={Routes.Menu.path} element={<ProtectedRoute><RouteWithLoader component={Menu} /></ProtectedRoute>} />
+      <Route path={Routes.Menu2.path} element={<ProtectedRoute><RouteWithLoader component={Menu2} /></ProtectedRoute>} />
+      <Route path={Routes.Menu3.path} element={<RouteWithLoader component={Menu3} />} />
+      <Route path={Routes.Products.path} element={<ProtectedRoute><RouteWithLoader component={Products} /></ProtectedRoute>} />
+      <Route path={Routes.Products2.path} element={<ProtectedRoute><RouteWithLoader component={Products2} /></ProtectedRoute>} />
+      <Route path={Routes.Products3.path} element={<RouteWithLoader component={Products3} />} />
 
 
 

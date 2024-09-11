@@ -45,7 +45,7 @@ export default () => {
 
     const handleCategoryClick = (categoryName) => {
         const encodedCategoryName = encodeURIComponent(categoryName);
-        navigate(`/menu3/products/${encodedCategoryName}`);
+        navigate(`/menu/products/${encodedCategoryName}`);
     };
 
     return (

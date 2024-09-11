@@ -39,7 +39,7 @@ const ProtectedRoute = ({ children, requiredRoles = [] }) => {
 
   // Eğer kullanıcı oturum açmamışsa yönlendir
   if (!user) {
-    return <Navigate to="/signin" />;
+    return <Navigate to="/menu" />;
   }
 
   // Eğer gerekli rollerden birine sahip değilse yönlendir
