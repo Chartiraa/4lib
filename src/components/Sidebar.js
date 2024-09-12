@@ -53,7 +53,7 @@ export default (props = {}) => {
     const linkProps = external ? { href: link } : { as: Link, to: link };
 
     return (
-      <Nav.Item className={navItemClassName}>
+      <Nav.Item className={navItemClassName} onClick={() => setShow(false)}>
         <Nav.Link {...linkProps} target={target}>
           {icon && <FontAwesomeIcon icon={icon} className="sidebar-icon" style={{ color: "#1a1a1a" }} />}
           <span>{title}</span>

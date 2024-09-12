@@ -8,7 +8,7 @@ import Swal from "sweetalert2";
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
 import commands from "../data/commands";
 
-import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay } from "../data/DBFunctions";
+import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay, delOrders, delBaristaOrders } from "../data/DBFunctions";
 
 
 const ValueChange = ({ value, suffix }) => {
@@ -572,7 +572,7 @@ export const CategoriesTable = (refresh) => {
     "Frozen",
     "Soft İçecekler",
   ];
-  
+
   useEffect(() => {
     getCategories().then((res) => {
       const categoriesArray = Object.values(res);
@@ -584,7 +584,7 @@ export const CategoriesTable = (refresh) => {
       setCategories(sortedCategories);
     });
   }, [refresh]);
-  
+
 
   const delCategoryHandler = (categoryName) => {
     delCategory(categoryName);
@@ -702,8 +702,15 @@ export const Orders = (props) => {
     getOrders(tableName).then(res => setOrders(res));
   }, [refresh]);
 
+  const deleteOrder = (props) => {
+    delOrders(props);
+    delBaristaOrders(props.tableName, props.orderID);
+    getOrders(props.tableName).then(res => setOrders(res));
+
+  }
+
   const TableRow = (props) => {
-    const { productID, productName, quantity } = props;
+    const { productID, productName, quantity, orderID } = props;
 
     return (
       <tr>
@@ -718,13 +725,7 @@ export const Orders = (props) => {
           </span>
         </td>
         <td>
-          <Dropdown as={ButtonGroup}>
-            <Dropdown.Menu>
-              <Dropdown.Item className="text-danger">
-                <FontAwesomeIcon icon={faTrashAlt} className="me-2" /> Sil
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+          <FontAwesomeIcon icon={faTrashAlt} className="text-danger" style={{ cursor: "pointer" }} onClick={() => deleteOrder({ tableName, orderID })} />
         </td>
       </tr>
     );

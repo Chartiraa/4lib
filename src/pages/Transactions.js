@@ -28,11 +28,11 @@ export default () => {
       <Row >
         <Col xs={12} xl={2}>
           <ScrollPanel style={{ width: '100%', height: '98vh' }}>
-            <Col xl={12} xs={6} key={999} className="mb-4">
+            <Col xl={12} xs={12} key={999} className="mb-4">
               <TableButtonForPay title={"TakeAway"} setSelectedTable={setSelectedTable} handleClick={handleClick} />
             </Col>
             {Object.entries(tables).map(([key, value]) => (
-              <Col xl={12} xs={6} key={value.tableName || key} className="mb-4">
+              <Col xl={12} xs={12} key={value.tableName || key} className="mb-4">
                 <TableButtonForPay title={value.tableName} setSelectedTable={setSelectedTable} handleClick={handleClick} />
               </Col>
             ))}

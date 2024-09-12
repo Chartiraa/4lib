@@ -186,7 +186,9 @@ export async function getOrders(tableName) {
 }
 
 export async function addOrder(props) {
-    await set(ref(db, 'Cafe/Tables/' + props.tableName + '/' + Date.now()), {
+    const datenow = Date.now();
+    await set(ref(db, 'Cafe/Tables/' + props.tableName + '/' + datenow), {
+        orderID: datenow,
         productID: props.productID,
         productName: props.productName,
         productPrice: props.productPrice,
@@ -194,7 +196,7 @@ export async function addOrder(props) {
         lastEditDate: formatDate()
     });
 
-    await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + Date.now()), {
+    await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + datenow), {
         productID: props.productID,
         productName: props.productName,
         productPrice: props.productPrice,
@@ -325,72 +327,72 @@ export async function editBaristaOrders(props) {
 
 export async function delBaristaOrders(tableName, orderID) {
     try {
-      // Belirtilen referansta silme işlemini gerçekleştir
-      await remove(ref(db, `Cafe/Barista/${tableName}/${orderID}`));
+        // Belirtilen referansta silme işlemini gerçekleştir
+        await remove(ref(db, `Cafe/Barista/${tableName}/${orderID}`));
     } catch (error) {
-      console.error('Silme işlemi sırasında hata oluştu:', error); // Hataları konsola yazdır
-      throw new Error('Sipariş silinirken bir hata oluştu.'); // Hata mesajı döndür
+        console.error('Silme işlemi sırasında hata oluştu:', error); // Hataları konsola yazdır
+        throw new Error('Sipariş silinirken bir hata oluştu.'); // Hata mesajı döndür
     }
-  }
+}
 
 export const addUserToDatabase = async (user) => {
     const db = getDatabase();
     const userRef = ref(db, `users/${user.uid}`);
-  
+
     // Kullanıcının zaten var olup olmadığını kontrol et
     const snapshot = await get(userRef);
     if (!snapshot.exists()) {
-      // Kullanıcı Realtime Database'te yoksa ekle
-      set(userRef, {
-        email: user.email,
-        role: null // Başlangıçta rol yok
-      });
+        // Kullanıcı Realtime Database'te yoksa ekle
+        set(userRef, {
+            email: user.email,
+            role: null // Başlangıçta rol yok
+        });
     }
-  };
-  
-  // Veritabanından belirli bir kullanıcının rolünü getirir
-  export const getUserRole = async (uid) => {
+};
+
+// Veritabanından belirli bir kullanıcının rolünü getirir
+export const getUserRole = async (uid) => {
     const db = getDatabase();
     const userRef = ref(db, `users/${uid}`);
     const snapshot = await get(userRef);
-  
+
     if (snapshot.exists()) {
         console.log(snapshot.val().role)
-      return snapshot.val().role;
+        return snapshot.val().role;
     } else {
-      return null; // Kullanıcı yoksa null döner
+        return null; // Kullanıcı yoksa null döner
     }
-  };
-  
-  export const fetchUsers = (callback) => {
+};
+
+export const fetchUsers = (callback) => {
     const db = getDatabase();
     const usersRef = ref(db, 'users');
-  
+
     // Kullanıcıları Firebase'den çekme
     onValue(usersRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        const usersArray = Object.entries(data).map(([uid, userData]) => ({
-          uid,
-          email: userData.email,
-          role: userData.role || 'no-role', // Eğer rol yoksa 'no-role' olarak ayarla
-        }));
-        callback(usersArray);
-      }
+        const data = snapshot.val();
+        if (data) {
+            const usersArray = Object.entries(data).map(([uid, userData]) => ({
+                uid,
+                email: userData.email,
+                role: userData.role || 'no-role', // Eğer rol yoksa 'no-role' olarak ayarla
+            }));
+            callback(usersArray);
+        }
     });
-  };
-  
-  // Kullanıcı rolünü güncelleme
-  export const updateUserRoleInDB = (uid, newRole) => {
-    const db = getDatabase();
-    const userRef = ref(db, `users/${uid}`);
-  
-    return update(userRef, { role: newRole });
-  };
+};
 
-  export const deleteUserFromDB = (uid) => {
+// Kullanıcı rolünü güncelleme
+export const updateUserRoleInDB = (uid, newRole) => {
     const db = getDatabase();
     const userRef = ref(db, `users/${uid}`);
-  
+
+    return update(userRef, { role: newRole });
+};
+
+export const deleteUserFromDB = (uid) => {
+    const db = getDatabase();
+    const userRef = ref(db, `users/${uid}`);
+
     return remove(userRef); // Firebase'den kullanıcıyı sil
-  };
+};
