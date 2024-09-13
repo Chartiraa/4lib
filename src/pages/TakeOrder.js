@@ -19,15 +19,22 @@ export default () => {
     const [isXLargeScreen, setIsXLargeScreen] = useState(window.innerWidth >= 1200);
     const [emptyTables, setEmptyTables] = useState([]); // Boş masaları tutacak state
 
-    // Seçili kategoriye göre ürünleri filtreleyin
-    const filteredProducts = selectedCategory ? Object.values(products).filter(product => product.productCategory === selectedCategory) : [];
+    // Seçili kategoriye göre ürünleri filtreleyin ve sıralayın
+    const filteredProducts = selectedCategory ? Object.values(products)
+        .filter(product => product.productCategory === selectedCategory)
+        .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)) : [];
 
     useEffect(() => {
         getProducts().then(res => {
-            setProducts(res); // Ürünleri duruma set edin
+            // Ürünleri `sortOrder`'a göre sıralayın
+            const sortedProducts = Object.values(res).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+            setProducts(sortedProducts.reduce((acc, product) => ({ ...acc, [product.productID]: product }), {}));
         });
+
         getCategories().then(res => {
-            setCategories(res); // Kategorileri duruma set edin
+            // Kategorileri `sortOrder`'a göre sıralayın
+            const sortedCategories = Object.values(res).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+            setCategories(sortedCategories.reduce((acc, category) => ({ ...acc, [category.categoryName]: category }), {}));
         });
 
         // Ekran boyutunu izlemek için bir event listener ekleyin
@@ -67,7 +74,7 @@ export default () => {
     return (
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingInline: isXLargeScreen ? '2.5rem' : '1rem' }}>
-                <label className="text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{decodedTableName != 'TakeAway' ? 'Masa - ' + decodedTableName : decodedTableName}</label>
+                <label className="text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{decodedTableName !== 'TakeAway' ? 'Masa - ' + decodedTableName : decodedTableName}</label>
                 <Button variant="primary" style={{ backgroundColor: '#eeeeee', border: '1px solid #262B40', color: '#262B40' }} onClick={() => moveTable()}>Masa Taşı</Button>
             </div>
             <Row>
@@ -76,17 +83,17 @@ export default () => {
                 </Col>
                 <Col xs={12} xl={3}>
                     {isXLargeScreen ? (
-                            <Row>
-                                {Object.values(categories).map((category, index) => (
-                                    <Col xs={6} xl={6} key={index}>
-                                        <CategoryButton
-                                            key={index}
-                                            title={category.categoryName}
-                                            onClick={() => setSelectedCategory(category.categoryName)}
-                                        />
-                                    </Col>
-                                ))}
-                            </Row>
+                        <Row>
+                            {Object.values(categories).map((category, index) => (
+                                <Col xs={6} xl={6} key={index}>
+                                    <CategoryButton
+                                        key={index}
+                                        title={category.categoryName}
+                                        onClick={() => setSelectedCategory(category.categoryName)}
+                                    />
+                                </Col>
+                            ))}
+                        </Row>
                     ) : (
                         <Form.Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} aria-label="Kategori Seçin" style={{ marginBottom: '2rem', marginTop: '1rem' }} >
                             {Object.values(categories).map((category, index) => (
@@ -116,6 +123,8 @@ export default () => {
                 visible={visible}
                 style={{ width: '50vw' }}
                 onHide={() => setVisible(false)}
+                closable={true}  // Çarpı butonunu etkinleştir
+                dismissableMask={true}  // Maske alanına tıklayarak kapatmayı etkinleştir
             >
                 {emptyTables.length > 0 ? (
                     emptyTables.map((table, index) => (
@@ -125,6 +134,7 @@ export default () => {
                     <p className="m-0">Boş masa yok.</p>
                 )}
             </Dialog>
+
         </>
     );
 };

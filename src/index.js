@@ -6,6 +6,7 @@ import "./scss/volt.scss";
 
 import "../src/css/index.css";
 import "react-datetime/css/react-datetime.css";
+import 'primeicons/primeicons.css';
 
 import HomePage from "./pages/HomePage";
 import ScrollToTop from "./components/ScrollToTop";

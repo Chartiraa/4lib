@@ -144,7 +144,7 @@ export const CategoryButton = (props) => {
   return (
     <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#4A5073", color: "white" }}  className="shadow-sm mb-3">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "3.3rem" }}>
+        <Row className="d-flex align-items-center" style={{ height: "4rem" }}>
           <Col xl className="d-flex flex-column justify-content-center text-center">
             <label className="mb-1" style={{ fontSize: "0.8rem", fontWeight: "bold", margin: 'auto' }}>{title}</label>
           </Col>

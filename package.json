@@ -38,6 +38,7 @@
     "chartist-plugin-tooltips-updated": "^0.1.4",
     "firebase": "^10.12.4",
     "moment-timezone": "^0.5.31",
+    "primeicons": "^7.0.0",
     "primereact": "^10.7.0",
     "react": "^16.13.1",
     "react-beautiful-dnd": "^13.1.1",
