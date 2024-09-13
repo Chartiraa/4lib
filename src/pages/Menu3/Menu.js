@@ -9,36 +9,19 @@ export default () => {
     const [categories, setCategories] = useState([]);
     const navigate = useNavigate();
 
-    // Kategori sıralama düzeni
-    const categoryOrder = [
-        "Sıcak Kahveler",
-        "Soğuk Kahveler",
-        "Cold Chocolate",
-        "Doyurucu Sıcaklar",
-        "Soğuk Çaylar",
-        "Geleneksel",
-        "Diğer Soğuk İçecekler",
-        "Bitki Çayları",
-        "Limonatalar",
-        "Milkshake",
-        "Bubble Tea",
-        "Frozen",
-        "Soft İçecekler",
-    ];
-
     useEffect(() => {
         getCategories().then(res => {
+            // Kategorileri nesneden diziye çevir ve gerekli bilgileri al
             const categoriesArray = Object.values(res).map(category => ({
                 categoryName: category.categoryName,
                 categoryBanner: category.categoryBanner,
-                lastEditDate: category.lastEditDate
+                lastEditDate: category.lastEditDate,
+                sortOrder: category.sortOrder || 0 // Eğer sortOrder tanımlı değilse varsayılan olarak 0 kullan
             }));
 
-            // Kategorileri belirtilen sıraya göre sıralama
-            const sortedCategories = categoriesArray.sort(
-                (a, b) =>
-                    categoryOrder.indexOf(a.categoryName) - categoryOrder.indexOf(b.categoryName)
-            );
+            // Kategorileri `sortOrder` alanına göre sıralama
+            const sortedCategories = categoriesArray.sort((a, b) => a.sortOrder - b.sortOrder);
+
             setCategories(sortedCategories);
         });
     }, []);
