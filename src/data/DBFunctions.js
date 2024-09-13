@@ -1,4 +1,4 @@
-import { getDatabase, ref, child, get, set, remove, onValue, update } from "firebase/database";
+import { getDatabase, ref, child, get, set, remove, onValue, update, push } from "firebase/database";
 import { getStorage, uploadBytes, getDownloadURL, ref as sRef } from "firebase/storage";
 import { auth } from "../firebaseConfig";
 
@@ -110,6 +110,7 @@ export async function getProducts() {
     return returnValue
 }
 
+
 export async function addProduct(props) {
 
     await set(ref(db, 'Cafe/Products/' + props.productID + '/'), {
@@ -150,6 +151,7 @@ export async function getCategories() {
 
     return returnValue
 }
+
 
 export async function addCategory(props) {
     await set(ref(db, 'Cafe/Categories/' + props.categoryName + '/'), {
@@ -256,15 +258,19 @@ export async function payOrder(props) {
     });
 }
 
-export async function addLog(props) {
-    const dateOnly = formatDateOnly(); // `formatDateOnly()` fonksiyonunu çağırarak sonucu kullanın
-    await set(ref(db, 'Cafe/Logs/' + props.tableName + '/' + dateOnly), { // `dateOnly` değişkenini kullanın
-        tableName: props.tableName,
-        action: props.action,
-        amount: props.amount,
-        lastEditDate: formatDate() // `formatDate()` fonksiyonunu çağırarak sonucu kullanın
+export async function addLog({ tableName, action, amount, payment_method, cashier_name, products_sold }) {
+    const logRef = ref(db, 'Cafe/Logs/' + formatDate()); // Logları tarih bazlı kaydediyoruz.
+
+    // Yeni log kaydı oluştur
+    await push(logRef, {
+        tableName: tableName,
+        action: action,
+        amount: amount,
+        payment_method: payment_method,
+        cashier_name: cashier_name,
+        products_sold: products_sold,
+        date: new Date().toISOString(),
     });
-    console.log('Log eklendi:', props); // Hata kontrolü ve başarı bildirimi için
 }
 
 export async function tempPay(props) {
@@ -395,4 +401,145 @@ export const deleteUserFromDB = (uid) => {
     const userRef = ref(db, `users/${uid}`);
 
     return remove(userRef); // Firebase'den kullanıcıyı sil
+};
+
+export async function getEmptyTables() {
+    const dbRef = ref(db);
+    try {
+        // Masalar ve Siparişler tablolarını çek
+        const tableDataSnapshot = await get(child(dbRef, 'Cafe/TableData'));
+        const ordersSnapshot = await get(child(dbRef, 'Cafe/Tables'));
+
+        if (tableDataSnapshot.exists()) {
+            const tables = tableDataSnapshot.val(); // Tüm masalar
+            const orders = ordersSnapshot.exists() ? ordersSnapshot.val() : {}; // Mevcut siparişler
+
+            // Sipariş olan masaları bir sete ekle
+            const occupiedTablesSet = new Set(Object.keys(orders));
+
+            // Masalar listesinden dolu olanları çıkartarak boş masaları bul
+            const emptyTables = Object.keys(tables).filter(table => !occupiedTablesSet.has(table));
+
+            return emptyTables; // Boş masaların listesini döndür
+        } else {
+            console.log('Cafe/TableData tablosu bulunamadı.');
+            return [];
+        }
+    } catch (error) {
+        console.error('Boş masalar bulunurken bir hata oluştu:', error);
+        return [];
+    }
+}
+
+export async function getOccupiedTables() {
+    const dbRef = ref(db);
+    try {
+        const ordersSnapshot = await get(child(dbRef, 'Cafe/Tables'));
+
+        if (ordersSnapshot.exists()) {
+            const orders = ordersSnapshot.val();
+            const occupiedTables = Object.keys(orders); // Dolu masaların listesi
+
+            return occupiedTables; // Dolu masaların listesini döndür
+        } else {
+            console.log('Cafe/Tables tablosu bulunamadı.');
+            return [];
+        }
+    } catch (error) {
+        console.error('Dolu masalar bulunurken bir hata oluştu:', error);
+        return [];
+    }
+}
+
+/**
+ * Firebase'de bir masa numarasını değiştirir.
+ * @param {string} oldTableNumber - Eski masa numarası.
+ * @param {string} newTableNumber - Yeni masa numarası.
+ * @returns {Promise<void>}
+ */
+export async function changeTableNumber(oldTableNumber, newTableNumber) {
+    const tableRef = ref(db, `Cafe/Tables/${oldTableNumber}`);
+    const newTableRef = ref(db, `Cafe/Tables/${newTableNumber}`);
+
+    try {
+        // Eski masa numarasını Firebase'den al
+        const snapshot = await get(tableRef);
+
+        if (snapshot.exists()) {
+            const tableData = snapshot.val(); // Mevcut masa verilerini al
+
+            // Yeni masa numarasıyla kaydet
+            await set(newTableRef, tableData);
+
+            // Eski masa kaydını sil
+            await remove(tableRef);
+
+            console.log(`Masa numarası ${oldTableNumber} başarıyla ${newTableNumber} olarak değiştirildi.`);
+        } else {
+            console.log(`Masa ${oldTableNumber} bulunamadı.`);
+        }
+    } catch (error) {
+        console.error("Masa numarası değiştirilirken bir hata oluştu:", error);
+    }
+}
+
+function parseDateTime(dateTimeString) {
+    if (!dateTimeString) return null; // dateTimeString undefined ise, null döner
+    const [datePart, timePart] = dateTimeString.split(' - ');
+    const [day, month, year] = datePart.split('-');
+    const [hour, minute] = timePart.split(':');
+
+    return new Date(year, month - 1, day, hour, minute); // JavaScript'te aylar 0 bazlıdır (0 = Ocak)
+}
+
+// Tarih aralığını kontrol eden ve logları getiren fonksiyon
+export async function fetchLogsByDateRange(startDate, endDate) {
+    const logsRef = ref(db, 'Cafe/Logs');
+    const snapshot = await get(logsRef);
+    const allLogs = snapshot.val();
+
+    // Eğer veri yoksa boş dizi döner
+    if (!allLogs) {
+        return [];
+    }
+
+    // Tarihleri karşılaştırarak logları filtreler
+    const filteredLogs = Object.keys(allLogs)
+        .filter(dateTime => {
+            const logDate = parseDateTime(dateTime); // Log tarih formatını parse eder
+            if (!logDate) return false; // Eğer logDate geçerli değilse filtrelemeden çıkar
+            return logDate >= parseDateTime(startDate) && logDate <= parseDateTime(endDate);
+        })
+        .reduce((acc, dateTime) => {
+            const logs = Object.entries(allLogs[dateTime]).map(([key, value]) => ({ ...value, date: dateTime }));
+            return [...acc, ...logs];
+        }, []);
+
+    return filteredLogs;
+}
+
+export function getCurrentUserName() {
+    const user = auth.currentUser; // auth.currentUser kullanarak giriş yapmış kullanıcıya erişim
+    return user ? user.displayName : 'Anonim Kullanıcı'; // Kullanıcı adı yoksa 'Anonim Kullanıcı' kullan
+}
+
+// Firebase'de kategori sıralamasını güncelleyen fonksiyon
+export const updateCategoryOrder = async (categories) => {
+    try {
+        Object.entries(categories).forEach(([categoryId, category], index) => {
+            const categoryRef = ref(db, `Cafe/Categories/${categoryId}`);
+            update(categoryRef, { sortOrder: index });
+        });
+    } catch (error) {
+        console.error('Kategori sıralaması güncellenirken hata oluştu:', error);
+    }
+};
+  
+
+// Firebase'de ürün sıralamasını güncelleyen fonksiyon
+export const updateProductOrder = async (categoryId, products) => {
+    products.forEach((product, index) => {
+        const productRef = ref(db, `Cafe/Products/${product.id}`);
+        update(productRef, { sortOrder: index }); // Firebase'de `sortOrder` güncelle
+    });
 };

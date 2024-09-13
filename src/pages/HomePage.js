@@ -9,13 +9,14 @@ import Menu from "./Menu1/Menu";
 import Menu2 from "./Menu2/Menu";
 import Menu3 from "./Menu3/Menu";
 import Barista from "./Barista";
+import MenuSettings from "./MenuSettings";
 import Products from "./Menu1/Products";
 import Products2 from "./Menu2/Products";
 import Products3 from "./Menu3/Products";
 
 import DashboardOverview from "./dashboard/DashboardOverview";
 import TakeOrder from './TakeOrder';
-import Cash from './Cash';
+import LogTable from './LogTable';
 import Transactions from "./Transactions";
 import Settings from "./Settings";
 import BootstrapTables from "./tables/BootstrapTables";
@@ -134,6 +135,15 @@ export default function App() {
     </ProtectedRoute>
   }
 />
+
+<Route
+  path={Routes.MenuSettings.path}
+  element={
+    <ProtectedRoute requiredRoles={["admin"]}>
+      <RouteWithSidebar component={MenuSettings} />
+    </ProtectedRoute>
+  }
+/>
 <Route
   path={Routes.TakeOrder.path}
   element={
@@ -143,10 +153,10 @@ export default function App() {
   }
 />
 <Route
-  path={Routes.Cash.path}
+  path={Routes.LogTable.path}
   element={
     <ProtectedRoute requiredRoles={["cashier", "admin"]}>
-      <RouteWithSidebar component={Cash} />
+      <RouteWithSidebar component={LogTable} />
     </ProtectedRoute>
   }
 />

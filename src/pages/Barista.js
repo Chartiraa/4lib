@@ -50,6 +50,7 @@ export default () => {
                       key={`${key}-${key1}`}  // Daha iyi bir key kullanımı
                       title={key}
                       productName={value1.productName}
+                      date={value1.lastEditDate}
                       onClick={() => onClick({ tableName: key, orderID: key1, productName: value1.productName })}
                     />
                   ))}

@@ -63,8 +63,10 @@ export const ChoosePhotoWidget = (props) => {
   );
 };
 
+
+
 export const TableButton = (props) => {
-  const { title } = props;
+  const { title, height } = props;
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -73,9 +75,9 @@ export const TableButton = (props) => {
   };
 
   return (
-    <Card onClick={handleClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
+    <Card onClick={handleClick} style={props.style} border="dark" className="shadow-sm">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "8rem" }}>
+        <Row className="d-flex align-items-center" style={{ height: height }}>
           <Col className="d-flex flex-column justify-content-center text-center">
             <h5 className="mb-1">{title}</h5>
           </Col>
@@ -87,6 +89,17 @@ export const TableButton = (props) => {
 
 export const BaristaButton = (props) => {
 
+  function extractTime(dateTimeString) {
+    // Tarih ve saat kısmını ayır
+    const parts = dateTimeString.split(' - '); // ['13-09-2024', '10:51']
+  
+    if (parts.length === 2) {
+      return parts[1]; // Saat kısmını döndür
+    }
+  
+    return null; // Geçersiz format durumu için null döndür
+  }
+
   return (
     <Card style={{ backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
       <Card.Body>
@@ -94,6 +107,7 @@ export const BaristaButton = (props) => {
           <Col className="d-flex flex-column text-center">
             <h4 className="mb-1">{props.title}</h4>
             <h6 className="mb-1">{props.productName}</h6>
+            <h6 className="mb-1">{extractTime(props.date)}</h6>
             <Button onClick={props.onClick} variant="outline-primary" size="sm">Hazırlandı</Button>
 
           </Col>
@@ -128,11 +142,11 @@ export const CategoryButton = (props) => {
   const { title, onClick } = props;
 
   return (
-    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm mb-3">
+    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#4A5073", color: "white" }}  className="shadow-sm mb-3">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "6rem" }}>
+        <Row className="d-flex align-items-center" style={{ height: "3.3rem" }}>
           <Col xl className="d-flex flex-column justify-content-center text-center">
-            <h3 className="mb-1">{title}</h3>
+            <label className="mb-1" style={{ fontSize: "0.8rem", fontWeight: "bold", margin: 'auto' }}>{title}</label>
           </Col>
         </Row>
       </Card.Body>

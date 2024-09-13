@@ -3,7 +3,7 @@ import SimpleBar from 'simplebar-react';
 import { useLocation } from "react-router-dom";
 import { CSSTransition } from 'react-transition-group';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faCog, faTable, faTimes, faCashRegister, faBars, faSignOutAlt } from "@fortawesome/free-solid-svg-icons";
+import { faChartPie, faCog, faTable, faTimes, faCashRegister, faBars, faSignOutAlt, faFile } from "@fortawesome/free-solid-svg-icons";
 import { Nav, Badge, Image, Button, Dropdown, Accordion, Navbar } from '@themesberg/react-bootstrap';
 import { Link } from 'react-router-dom';
 
@@ -114,6 +114,8 @@ export default (props = {}) => {
               <NavItem title="Menü 2" icon={faChartPie} link={Routes.Menu2.path} />
               <NavItem title="Menü 3" icon={faChartPie} link={Routes.Menu3.path} />
               <NavItem title="Barista" icon={faChartPie} link={Routes.Barista.path} />
+              <NavItem title="Kayıtlar" icon={faFile} link={Routes.LogTable.path} />
+              <NavItem title="Menü Ayarları" icon={faFile} link={Routes.MenuSettings.path} />
               <NavItem title="Ayarlar" icon={faCog} link={Routes.Settings.path} />
 
               <Dropdown.Divider className="my-2" style={{ borderColor: "#1a1a1a" }} />
