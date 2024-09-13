@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
-import { Table, Button } from '@themesberg/react-bootstrap'; // Gerekli bileşenler
+import { Table, Button, Row, Col } from '@themesberg/react-bootstrap'; // Gerekli bileşenler
 import { getCategories, getProducts, updateCategoryOrder, updateProductOrder } from '../data/DBFunctions'; // Firebase fonksiyonları
 
 const MenuOrderManager = () => {
   const [categories, setCategories] = useState({});
   const [products, setProducts] = useState({});
+  const [selectedCategory, setSelectedCategory] = useState(null); // Seçilen kategori
   const [updatedCategories, setUpdatedCategories] = useState({});
   const [updatedProducts, setUpdatedProducts] = useState({});
 
@@ -27,10 +28,11 @@ const MenuOrderManager = () => {
     getProducts().then(res => {
       if (typeof res === 'object' && res !== null) {
         // Ürünleri `sortOrder`'a göre sırala
-        const sortedProducts = Object.keys(res).reduce((acc, categoryID) => {
-          acc[categoryID] = Object.fromEntries(
-            Object.entries(res[categoryID]).sort((a, b) => a[1].sortOrder - b[1].sortOrder)
-          );
+        const sortedProducts = Object.keys(res).reduce((acc, productID) => {
+          const product = res[productID];
+          const category = product.productCategory;
+          if (!acc[category]) acc[category] = {};
+          acc[category][productID] = product;
           return acc;
         }, {});
         setProducts(sortedProducts);
@@ -67,79 +69,92 @@ const MenuOrderManager = () => {
     }
   };
 
-  const handleSave = () => {
+  // Kategorileri kaydetme fonksiyonu (bu kısmı değiştirmedik)
+  const handleSaveCategories = () => {
     updateCategoryOrder(updatedCategories);
-  
-    // Her bir kategori için ürünleri ayrı ayrı kaydet
-    Object.keys(updatedProducts).forEach(categoryID => {
-      const productsArray = Object.entries(updatedProducts[categoryID]).map(([key, value]) => ({ id: key, ...value }));
-      updateProductOrder(categoryID, productsArray); // Dizi olarak gönderiyoruz
-    });
-  
-    // Orijinal state'i güncelle
     setCategories(updatedCategories);
-    setProducts(updatedProducts);
+  };
+
+  // Ürünleri kaydetme fonksiyonu
+  const handleSaveProducts = () => {
+    if (!selectedCategory) return; // Kategori seçilmediyse işlemi durdur
+
+    const productsArray = Object.entries(updatedProducts[selectedCategory]).map(([key, value]) => ({ id: key, ...value }));
+    updateProductOrder(selectedCategory, productsArray); // Seçilen kategoriye göre ürünleri kaydet
+
+    // Orijinal state'i güncelle
+    setProducts(prev => ({ ...prev, [selectedCategory]: updatedProducts[selectedCategory] }));
+    console.log("Ürünler kaydedildi.");
   };
 
   return (
-    <>
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Table bordered>
+    <Row>
+      {/* Kategoriler Bölümü */}
+      <Col md={6}>
+        <h4>Kategoriler</h4>
+        <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="all-categories" type="category">
             {(provided) => (
-              <tbody {...provided.droppableProps} ref={provided.innerRef}>
-                {Object.entries(updatedCategories).map(([catKey, category], catIndex) => (
-                  <Draggable key={catKey} draggableId={catKey} index={catIndex}>
-                    {(provided) => (
-                      <React.Fragment>
-                        <tr 
-                          ref={provided.innerRef} 
-                          {...provided.draggableProps} 
+              <Table bordered {...provided.droppableProps} ref={provided.innerRef}>
+                <tbody>
+                  {Object.entries(updatedCategories).map(([catKey, category], catIndex) => (
+                    <Draggable key={catKey} draggableId={catKey} index={catIndex}>
+                      {(provided) => (
+                        <tr
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
                           {...provided.dragHandleProps}
+                          onClick={() => setSelectedCategory(catKey)} // Kategori seçimi
                         >
-                          <td colSpan="2" className="bg-primary text-white">
-                            {category.categoryName}
-                          </td>
+                          <td>{category.categoryName}</td>
                         </tr>
-
-                        {/* Ürünleri Listele */}
-                        <tr>
-                          <td colSpan="2">
-                            <Droppable droppableId={catKey} type="product">
-                              {(provided) => (
-                                <div {...provided.droppableProps} ref={provided.innerRef}>
-                                  {updatedProducts[catKey] && Object.entries(updatedProducts[catKey]).map(([prodKey, product], prodIndex) => (
-                                    <Draggable key={prodKey} draggableId={prodKey} index={prodIndex}>
-                                      {(provided) => (
-                                        <tr 
-                                          ref={provided.innerRef} 
-                                          {...provided.draggableProps} 
-                                          {...provided.dragHandleProps}
-                                        >
-                                          <td>{product.productName}</td>
-                                          <td>{product.productPrice} TL</td>
-                                        </tr>
-                                      )}
-                                    </Draggable>
-                                  ))}
-                                  {provided.placeholder}
-                                </div>
-                              )}
-                            </Droppable>
-                          </td>
-                        </tr>
-                      </React.Fragment>
-                    )}
-                  </Draggable>
-                ))}
-                {provided.placeholder}
-              </tbody>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </tbody>
+              </Table>
             )}
           </Droppable>
-        </Table>
-      </DragDropContext>
-      <Button onClick={handleSave} variant="success">Kaydet</Button>
-    </>
+        </DragDropContext>
+        <Button onClick={handleSaveCategories} variant="success">Kategorileri Kaydet</Button>
+      </Col>
+
+      {/* Ürünler Bölümü */}
+      <Col md={6}>
+        <h4>Ürünler</h4>
+        {selectedCategory && updatedProducts[selectedCategory] ? ( // Seçili kategori ve ürün kontrolü
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId={selectedCategory} type="product">
+              {(provided) => (
+                <Table bordered {...provided.droppableProps} ref={provided.innerRef}>
+                  <tbody>
+                    {Object.entries(updatedProducts[selectedCategory]).map(([prodKey, product], prodIndex) => (
+                      <Draggable key={prodKey} draggableId={prodKey} index={prodIndex}>
+                        {(provided) => (
+                          <tr
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <td>{product.productName}</td>
+                            <td>{product.productPrice} TL</td>
+                          </tr>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </tbody>
+                </Table>
+              )}
+            </Droppable>
+          </DragDropContext>
+        ) : (
+          <p>Lütfen bir kategori seçin veya bu kategoride ürün yok.</p>
+        )}
+        <Button onClick={handleSaveProducts} variant="success" disabled={!selectedCategory}>Ürünleri Kaydet</Button>
+      </Col>
+    </Row>
   );
 };
 
