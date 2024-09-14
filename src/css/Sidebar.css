@@ -28,6 +28,6 @@
     /* Hem active hem de hover durumunda metin rengi */
 }
 
-body, h1, h2, h3, h4, h5, h6, p, ol, ul, label {
+body, h1, h2, h3, h4, h5, h6, p, ol, ul, label, span, li, td, th, button, input {
     font-family: 'Montserrat', sans-serif;
 }

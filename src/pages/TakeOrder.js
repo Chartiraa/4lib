@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Col, Row, Form, Button } from '@themesberg/react-bootstrap';
+import { Col, Row, Form, Button, Modal } from '@themesberg/react-bootstrap';
 import { useParams } from "react-router-dom";
 import { ScrollPanel } from 'primereact/scrollpanel';
 import { Dialog } from 'primereact/dialog';
@@ -17,7 +17,14 @@ export default () => {
     const [selectedCategory, setSelectedCategory] = useState('Soğuk Kahveler');
     const [refresh, setRefresh] = useState(0);
     const [isXLargeScreen, setIsXLargeScreen] = useState(window.innerWidth >= 1200);
-    const [emptyTables, setEmptyTables] = useState([]); // Boş masaları tutacak state
+    const [emptyTables, setEmptyTables] = useState([]);
+    const [showOptionsModal, setShowOptionsModal] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [extraShot, setExtraShot] = useState('Yok'); // Varsayılan: Yok
+    const [syrupFlavor, setSyrupFlavor] = useState('Yok'); // Varsayılan: Yok
+    const [syrupAmount, setSyrupAmount] = useState('Tek'); // Varsayılan: Tek
+    const [milkType, setMilkType] = useState('Normal'); // Varsayılan: Normal
+    const [quantity, setQuantity] = useState(1); // Varsayılan: 1
 
     // Seçili kategoriye göre ürünleri filtreleyin ve sıralayın
     const filteredProducts = selectedCategory ? Object.values(products)
@@ -26,36 +33,58 @@ export default () => {
 
     useEffect(() => {
         getProducts().then(res => {
-            // Ürünleri `sortOrder`'a göre sıralayın
             const sortedProducts = Object.values(res).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
             setProducts(sortedProducts.reduce((acc, product) => ({ ...acc, [product.productID]: product }), {}));
         });
 
         getCategories().then(res => {
-            // Kategorileri `sortOrder`'a göre sıralayın
             const sortedCategories = Object.values(res).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
             setCategories(sortedCategories.reduce((acc, category) => ({ ...acc, [category.categoryName]: category }), {}));
         });
 
-        // Ekran boyutunu izlemek için bir event listener ekleyin
         const handleResize = () => {
             setIsXLargeScreen(window.innerWidth >= 1200);
         };
 
         window.addEventListener('resize', handleResize);
-
-        // Cleanup function: event listener'ı kaldırın
         return () => {
             window.removeEventListener('resize', handleResize);
         };
     }, []);
 
     const handleProductClick = (product) => {
-        const quantity = 1;
-        addOrder({ productID: product.productID, productName: product.productName, productPrice: product.productPrice, quantity: quantity, tableName: decodedTableName }).then(() => {
+        setSelectedProduct(product); // Seçili ürünü ayarla
+        setQuantity(1); // Varsayılan miktarı sıfırla
+        setExtraShot('Yok'); // Ekstra seçenekleri sıfırla
+        setSyrupFlavor('Yok');
+        setSyrupAmount('Tek');
+        setMilkType('Normal');
+        setShowOptionsModal(true); // Modalı göster
+    };
+
+    const addOrderToTable = (product) => {
+        addOrder({
+            productID: product.productID,
+            productName: product.productName,
+            productPrice: product.productPrice,
+            quantity: quantity,
+            tableName: decodedTableName,
+            productCategory: product.productCategory,
+            extraShot: extraShot,
+            syrupFlavor: syrupFlavor,
+            syrupAmount: syrupAmount,
+            milkType: milkType
+        }).then(() => {
             setRefresh(refresh + 1);
-        })
-    }
+        });
+        setShowOptionsModal(false);
+    };
+
+    const handleOrderWithOptions = () => {
+        if (selectedProduct) {
+            addOrderToTable(selectedProduct);
+        }
+    };
 
     const moveTable = () => {
         getEmptyTables().then(tables => {
@@ -105,17 +134,99 @@ export default () => {
                     )}
                 </Col>
                 <Col xs={12} xl={4}>
-                    <ScrollPanel style={{ width: '100%', height: '90vh' }}>
+                    <ScrollPanel style={{ width: '100%', height: isXLargeScreen ? '90vh' : '70vh' }}>
                         <Row>
                             {filteredProducts.map((product, index) => (
                                 <Col xs={6} xl={6} key={index}>
-                                    <ProductButton title={product.productName} onClick={() => handleProductClick(product)} />
+                                    <ProductButton title={product.productName} isXLargeScreen={isXLargeScreen} onClick={() => handleProductClick(product)} />
                                 </Col>
                             ))}
                         </Row>
                     </ScrollPanel>
                 </Col>
             </Row>
+            <Modal show={showOptionsModal} onHide={() => setShowOptionsModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Seçenekler</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {selectedProduct && selectedProduct.productCategory.includes('Kahve') && (
+                        <>
+                            {/* Kahve için ekstra seçenekler */}
+                            <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                <Form.Label>Ekstra Espresso Shot</Form.Label>
+                                <div className="d-flex justify-content-center">
+                                    <Button variant={extraShot === 'Yok' ? 'primary' : 'outline-primary'} onClick={() => setExtraShot('Yok')}>Yok</Button>
+                                    <Button variant={extraShot === 'Tek' ? 'primary' : 'outline-primary'} onClick={() => setExtraShot('Tek')} style={{ marginLeft: '10px' }}>Tek</Button>
+                                    <Button variant={extraShot === 'Double' ? 'primary' : 'outline-primary'} onClick={() => setExtraShot('Double')} style={{ marginLeft: '10px' }}>Double</Button>
+                                    <Button variant={extraShot === 'Triple' ? 'primary' : 'outline-primary'} onClick={() => setExtraShot('Triple')} style={{ marginLeft: '10px' }}>Triple</Button>
+                                </div>
+                            </Form.Group>
+                            {isXLargeScreen ? (
+                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                    <Form.Label>Aroma Şurubu Seçin</Form.Label>
+                                    <div className="d-flex justify-content-center">
+                                        <Button variant={syrupFlavor === 'Yok' ? 'primary' : 'outline-primary'} onClick={() => setSyrupFlavor('Yok')}>Yok</Button>
+                                        <Button variant={syrupFlavor === 'Vanilya' ? 'primary' : 'outline-primary'} onClick={() => setSyrupFlavor('Vanilya')} style={{ marginLeft: '10px' }}>Vanilya</Button>
+                                        <Button variant={syrupFlavor === 'Karamel' ? 'primary' : 'outline-primary'} onClick={() => setSyrupFlavor('Karamel')} style={{ marginLeft: '10px' }}>Karamel</Button>
+                                        <Button variant={syrupFlavor === 'Fındık' ? 'primary' : 'outline-primary'} onClick={() => setSyrupFlavor('Fındık')} style={{ marginLeft: '10px' }}>Fındık</Button>
+                                    </div>
+                                </Form.Group>
+                            ) : (
+                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                    <Form.Label>Aroma Şurubu Seçin</Form.Label>
+                                    <Form.Select value={syrupFlavor} onChange={(e) => setSyrupFlavor(e.target.value)} className="w-50">
+                                        <option value="Yok">Yok</option>
+                                        <option value="Vanilya">Vanilya</option>
+                                        <option value="Karamel">Karamel</option>
+                                        <option value="Fındık">Fındık</option>
+                                    </Form.Select>
+                                </Form.Group>
+                            )}
+                            {syrupFlavor !== 'Yok' && (
+                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                    <Form.Label>Aroma Şurubu Miktarı</Form.Label>
+                                    <div className="d-flex justify-content-center">
+                                        <Button variant={syrupAmount === 'Tek' ? 'primary' : 'outline-primary'} onClick={() => setSyrupAmount('Tek')}>Tek</Button>
+                                        <Button variant={syrupAmount === 'Double' ? 'primary' : 'outline-primary'} onClick={() => setSyrupAmount('Double')} style={{ marginLeft: '10px' }}>Double</Button>
+                                    </div>
+                                </Form.Group>
+                            )}
+                            {isXLargeScreen ? (
+                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                    <Form.Label>Süt Tipi Seçin</Form.Label>
+                                    <div className="d-flex justify-content-center">
+                                        <Button variant={milkType === 'Normal' ? 'primary' : 'outline-primary'} onClick={() => setMilkType('Normal')}>Normal</Button>
+                                        <Button variant={milkType === 'Laktozsuz' ? 'primary' : 'outline-primary'} onClick={() => setMilkType('Laktozsuz')} style={{ marginLeft: '10px' }}>Laktozsuz</Button>
+                                    </div>
+                                </Form.Group>
+                            ) : (
+                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                                    <Form.Label>Süt Tipi Seçin</Form.Label>
+                                    <Form.Select value={milkType} onChange={(e) => setMilkType(e.target.value)} className="w-50">
+                                        <option value="Normal">Normal Süt</option>
+                                        <option value="Laktozsuz">Laktozsuz Süt</option>
+                                    </Form.Select>
+                                </Form.Group>
+                            )}
+                        </>
+                    )}
+
+                    {/* Miktar Ayarlama Bölümü - Tüm Ürünler İçin */}
+                    <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                        <Form.Label>Adet</Form.Label>
+                        <div className="d-flex align-items-center justify-content-center">
+                            <Button variant="outline-primary" onClick={() => setQuantity(prev => Math.max(1, prev - 1))}>-</Button>
+                            <span className="mx-3">{quantity}</span>
+                            <Button variant="outline-primary" onClick={() => setQuantity(prev => prev + 1)}>+</Button>
+                        </div>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer className="d-flex justify-content-center">
+                    <Button variant="secondary" onClick={() => setShowOptionsModal(false)}>İptal</Button>
+                    <Button variant="primary" onClick={handleOrderWithOptions}>Sipariş Ver</Button>
+                </Modal.Footer>
+            </Modal>
 
             {/* Dialog Bileşeni */}
             <Dialog

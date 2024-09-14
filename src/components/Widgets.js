@@ -128,9 +128,9 @@ export const TableButtonForPay = (props) => {
   return (
     <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "8rem" }}>
+        <Row className="d-flex align-items-center" style={{ height: "4rem" }}>
           <Col className="d-flex flex-column justify-content-center text-center">
-            <h5 className="mb-1">{title}</h5>
+            <h6 className="mb-1">{title}</h6>
           </Col>
         </Row>
       </Card.Body>
@@ -144,11 +144,9 @@ export const CategoryButton = (props) => {
   return (
     <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#4A5073", color: "white" }}  className="shadow-sm mb-3">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "4rem" }}>
-          <Col xl className="d-flex flex-column justify-content-center text-center">
-            <label className="mb-1" style={{ fontSize: "0.8rem", fontWeight: "bold", margin: 'auto' }}>{title}</label>
+          <Col xl className="d-flex flex-column justify-content-center text-center" style={{ height: "4rem", margin: 'auto' }}>
+            <label className="mb-1" style={{ fontSize: "0.8rem", fontWeight: "bold" }}>{title}</label>
           </Col>
-        </Row>
       </Card.Body>
     </Card>
   );
@@ -156,16 +154,14 @@ export const CategoryButton = (props) => {
 
 // ProductButton Component
 export const ProductButton = (props) => {
-  const { title, onClick } = props;
+  const { title, onClick, isXLargeScreen } = props;
 
   return (
     <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm mb-3">
       <Card.Body>
-        <Row className="d-flex align-items-center" style={{ height: "6rem" }}>
-          <Col xl className="d-flex flex-column justify-content-center text-center">
-            <h5 className="mb-1">{title}</h5>
+          <Col xl className="d-flex align-items-center justify-content-center text-center" style={{ height: isXLargeScreen ? "6rem" : "3rem", margin: 'auto' }}>
+            <label className="mb-1" style={{ fontSize: isXLargeScreen ? "1rem" : "1rem" }}>{title}</label>
           </Col>
-        </Row>
       </Card.Body>
     </Card>
   );

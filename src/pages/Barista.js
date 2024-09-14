@@ -1,33 +1,47 @@
-import React, { useState, useEffect } from "react";
-import { Col, Row } from '@themesberg/react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Button, Pagination, Row, Col } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
-import { BaristaButton } from "../components/Widgets";
 import { getBaristaOrders, delBaristaOrders } from "../data/DBFunctions";
-import { ScrollPanel } from 'primereact/scrollpanel';
 
-export default () => {
-
-  const [orders, setOrders] = useState({});
-  const [refresh, setRefresh] = useState(0);
+export default function BaristaTable() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(12); // Sayfa başına gösterilecek öğe sayısı
+  const totalItems = orders.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
 
   useEffect(() => {
-    getBaristaOrders().then(res => setOrders(res));
-  }, [refresh]);
+    setLoading(true);
+    getBaristaOrders()
+      .then(res => {
+        const formattedOrders = Object.entries(res).flatMap(([tableName, tableOrders]) => 
+          Object.entries(tableOrders).map(([orderID, orderDetails]) => ({
+            tableName,
+            orderID,
+            ...orderDetails
+          }))
+        );
+        setOrders(formattedOrders);
+      })
+      .catch(err => setError('Veri çekerken bir hata oluştu: ' + err.message))
+      .finally(() => setLoading(false));
+  }, [currentPage]);
 
-  const onClick = (props) => {
-    console.log(props);
+  const handleOrderReady = ({ tableName, orderID, productName }) => {
     Swal.fire({
-      icon: "success",
-      title: "Masa:" + props.tableName + " - " + props.productName + " hazır mı?",
+      icon: "question",
+      title: "Masa:" + tableName + " - " + productName + " hazır mı?",
       showDenyButton: true,
       confirmButtonText: "Evet",
       denyButtonText: `Hayır`
     }).then((result) => {
       if (result.isConfirmed) {
-        delBaristaOrders(props.tableName, props.orderID)
+        delBaristaOrders(tableName, orderID)
           .then(() => {
             Swal.fire("Sipariş hazır!", "", "success");
-            setRefresh(refresh + 1);  // Buraya taşıdık
+            setOrders(prevOrders => prevOrders.filter(order => !(order.tableName === tableName && order.orderID === orderID)));
           })
           .catch(error => {
             console.error("Silme işlemi başarısız:", error);
@@ -37,29 +51,77 @@ export default () => {
     });
   };
 
+  const paginatedOrders = orders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+
   return (
-    <>
-      <Row style={{ marginTop: '2rem' }}>
-        <Col xl={12}>
-          <ScrollPanel style={{ width: '100%', height: '100%' }}>
-            <Row className="justify-content-md-center">
-              {Object.entries(orders).map(([key, value], index) => (
-                <Col xl={2} key={index} className="mb-4">
-                  {Object.entries(value).map(([key1, value1], index) => (
-                    <BaristaButton
-                      key={`${key}-${key1}`}  // Daha iyi bir key kullanımı
-                      title={key}
-                      productName={value1.productName}
-                      date={value1.lastEditDate}
-                      onClick={() => onClick({ tableName: key, orderID: key1, productName: value1.productName })}
-                    />
+    <Row>
+      {/* 12 Kolonluk Siparişler Tablosu */}
+      <Col xl={12}>
+        <Card border="light" className="table-wrapper table-responsive shadow-sm">
+          <Card.Body className="pt-0">
+            {loading ? (
+              <p>Yükleniyor...</p>
+            ) : error ? (
+              <p>{error}</p>
+            ) : (
+              <>
+                <Table hover className="align-items-center">
+                  <thead>
+                    <tr>
+                      <th className="border-bottom">Masa Adı</th>
+                      <th className="border-bottom">Ürün Adı</th>
+                      <th className="border-bottom">Fiyat</th>
+                      <th className="border-bottom">Adet</th>
+                      <th className="border-bottom">Ekstra Shot</th>
+                      <th className="border-bottom">Aroma Şurubu</th>
+                      <th className="border-bottom">Şurup Miktarı</th>
+                      <th className="border-bottom">Süt Tipi</th>
+                      <th className="border-bottom">Tarih</th>
+                      <th className="border-bottom">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedOrders.map((order, index) => (
+                      <tr key={index}>
+                        <td>{order.tableName}</td>
+                        <td>{order.productName}</td>
+                        <td>{order.productPrice} TL</td>
+                        <td>{order.quantity}</td>
+                        <td>{order.extraShot || '-'}</td>
+                        <td>{order.syrupFlavor || '-'}</td>
+                        <td>{order.syrupAmount || '-'}</td>
+                        <td>{order.milkType || '-'}</td>
+                        <td>{order.lastEditDate}</td>
+                        <td>
+                          <Button variant="outline-danger" onClick={() => handleOrderReady(order)}>
+                            Hazır
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+                {/* Sayfalama Kontrolleri */}
+                <Pagination className="mt-3">
+                  {Array.from({ length: totalPages }, (_, index) => (
+                    <Pagination.Item
+                      key={index + 1}
+                      active={index + 1 === currentPage}
+                      onClick={() => handlePageChange(index + 1)}
+                    >
+                      {index + 1}
+                    </Pagination.Item>
                   ))}
-                </Col>
-              ))}
-            </Row>
-          </ScrollPanel>
-        </Col>
-      </Row>
-    </>
+                </Pagination>
+              </>
+            )}
+          </Card.Body>
+        </Card>
+      </Col>
+    </Row>
   );
-};
+}

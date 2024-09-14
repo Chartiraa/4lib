@@ -3,13 +3,14 @@ import SimpleBar from 'simplebar-react';
 import { useLocation } from "react-router-dom";
 import { CSSTransition } from 'react-transition-group';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faCog, faTable, faTimes, faCashRegister, faBars, faSignOutAlt, faFile } from "@fortawesome/free-solid-svg-icons";
+import { faChartPie, faCog, faTable, faTimes, faCashRegister, faBars, faSignOutAlt, faFile, faBook, faCoffee } from "@fortawesome/free-solid-svg-icons";
 import { Nav, Badge, Image, Button, Dropdown, Accordion, Navbar } from '@themesberg/react-bootstrap';
 import { Link } from 'react-router-dom';
 
 import { Routes } from "../routes";
 import { auth } from "../firebaseConfig"; // Firebase ayar dosyanızdan doğru yolu kontrol edin
 import { signOut } from "firebase/auth"; // signOut fonksiyonunu ekliyoruz
+import { getCurrentUserName } from "../data/DBFunctions";
 
 import "../css/Sidebar.css"
 
@@ -110,16 +111,18 @@ export default (props = {}) => {
 
               <NavItem title="Anasayfa" link={Routes.Dashboard.path} icon={faTable} />
               <NavItem title="Kasa" icon={faCashRegister} link={Routes.Transactions.path} />
-              <NavItem title="Menü 1" icon={faChartPie} link={Routes.Menu.path} />
+              {/*<NavItem title="Menü 1" icon={faChartPie} link={Routes.Menu.path} />
               <NavItem title="Menü 2" icon={faChartPie} link={Routes.Menu2.path} />
-              <NavItem title="Menü 3" icon={faChartPie} link={Routes.Menu3.path} />
-              <NavItem title="Barista" icon={faChartPie} link={Routes.Barista.path} />
-              <NavItem title="Kayıtlar" icon={faFile} link={Routes.LogTable.path} />
+              <NavItem title="Menü 3" icon={faChartPie} link={Routes.Menu3.path} />*/}
+              <NavItem title="Barista" icon={faCoffee} link={Routes.Barista.path} />
+              <NavItem title="Kayıtlar" icon={faBook} link={Routes.LogTable.path} />
               <NavItem title="Menü Ayarları" icon={faFile} link={Routes.MenuSettings.path} />
               <NavItem title="Ayarlar" icon={faCog} link={Routes.Settings.path} />
 
               <Dropdown.Divider className="my-2" style={{ borderColor: "#1a1a1a" }} />
 
+
+              <label className="upgrade-to-pro" style={{ marginBottom: '4rem', color: "#1a1a1a", fontWeight: 'bold', fontSize: '20px', overflow: 'hidden', whiteSpace: 'wrap', textOverflow: 'ellipsis', textAlign: 'center' }}>{getCurrentUserName()}</label>
               <Button variant="danger" className="upgrade-to-pro" onClick={handleLogout}>
                 <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Çıkış Yap
               </Button>

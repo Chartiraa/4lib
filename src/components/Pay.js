@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Form, Row, Col } from '@themesberg/react-bootstrap';
-import { getOrders, getProducts, getTotal, setTotal, editTotal, addLog, delOrders, getTempPay, delTempPay, setTempPay, getCurrentUserName } from "../data/DBFunctions";
+import { getOrders, getProducts, getTotal, setTotal, editTotal, addLog, delOrders, getTempPay, delTempPay, tempPay, getCurrentUserName, updateOrderQuantity } from "../data/DBFunctions";
 import Numpad from "./Numpad";
 
 export default (props) => {
@@ -56,72 +56,89 @@ export default (props) => {
     };
 
     const onClickAll = () => {
+        // Tüm siparişler için tempPay fonksiyonunu tetikle
         Object.keys(orders).forEach(orderID => {
             const order = orders[orderID];
-            setTemp({ orderID, ...order });
+            tempPay({ orderID, productPrice: products[order.productID]?.productPrice }); // tempPay fonksiyonu çağrılıyor
         });
-        setRefresh(refresh + 1);
+    
+        setRefresh(refresh + 1);  // Arayüzü yenile
     };
 
     const onClickHalf = () => {
         setNumpadValue(remainder / 2);
     };
 
-    const onClickCredit = () => {
+    const handlePayment = (paymentMethod) => {
         const cashierName = getCurrentUserName(); // Kullanıcı adını al
-
-        editTotal({ tableName: tableName, total: (remainder - numpadValue) })
-            .then(() => {
-                setPaid(numpadValue);
-                setRemainder(remainder - numpadValue);
-                // Satış ürün detaylarını oluştur
-                const productsSold = Object.values(mergedData).map(order => ({
-                    product_name: products[order.productID]?.productName,
-                    quantity: order.quantity
-                }));
-                // Log ekleme
-                addLog({
-                    tableName: tableName,
-                    action: "Kredi Kartı",
-                    amount: numpadValue,
-                    payment_method: "Kredi Kartı",
-                    cashier_name: cashierName,  // Kasiyer adı ekleniyor
-                    products_sold: productsSold  // Satılan ürünlerin detayları ekleniyor
-                });
+        const productsSold = []; // Satılan ürünlerin tüm detaylarını tutacak dizi
+        let totalAmount = 0; // Toplam tutarı hesaplamak için değişken
+    
+        // getTempPay ile alınan tüm siparişler üzerinde işlem yap
+        Object.keys(temp).forEach(tempKey => {
+            const tempOrder = temp[tempKey]; // TempPay'den gelen sipariş
+            const tempQuantity = parseInt(tempOrder.quantity, 10); // Ödenmek istenen miktar
+    
+            // getOrders'dan gelen tabloyu kontrol et
+            const matchingOrder = orders[tempOrder.orderID]; // Orders'dan gelen ilgili sipariş
+            if (matchingOrder) {
+                const currentQuantity = parseInt(matchingOrder.quantity, 10); // Mevcut sipariş miktarı
+    
+                if (!isNaN(tempQuantity) && !isNaN(currentQuantity)) {
+                    const productName = tempOrder.productName || "Ürün adı bulunamadı";
+                    if (!productName || productName === "Ürün adı bulunamadı") {
+                        console.error(`Geçersiz ürün adı: ${tempOrder.productID}`);
+                        return; // Hata durumunda işlemi sonlandır
+                    }
+    
+                    if (tempQuantity === currentQuantity) {
+                        // Eğer miktarlar eşitse, siparişi hem Orders hem de TempPay'den sil
+                        delOrders({ tableName: tableName, orderID: tempOrder.orderID });
+                        delTempPay({ orderID: tempOrder.orderID });
+                    } else if (tempQuantity < currentQuantity) {
+                        // Eğer ödenmek istenen miktar mevcut miktardan küçükse
+                        const remainingQuantity = currentQuantity - tempQuantity;
+    
+                        // Orders tablosunu güncelle
+                        updateOrderQuantity({ tableName: tableName, orderID: tempOrder.orderID, quantity: remainingQuantity });
+    
+                        // TempPay tablosundan siparişi sil
+                        delTempPay({ orderID: tempOrder.orderID });
+                    } else {
+                        console.error(`Geçersiz miktar veya mevcut miktar (orderID: ${tempOrder.orderID}):`, tempOrder);
+                        return;
+                    }
+    
+                    // Satılan ürünler dizisine ekle
+                    productsSold.push({
+                        product_name: productName, // Ürün adı artık kesin olarak tanımlı
+                        quantity: tempQuantity // Sadece ödenen miktar için log
+                    });
+    
+                    // Toplam tutarı artır
+                    totalAmount += tempQuantity * parseFloat(tempOrder.productPrice);
+                }
+            }
+        });
+    
+        // Satış işlemi için log ekleme
+        if (productsSold.length > 0) {
+            addLog({
+                tableName: tableName,
+                action: paymentMethod, // `paymentMethod` dinamik olarak kullanılır
+                amount: totalAmount, // Toplam tutar
+                payment_method: paymentMethod,
+                cashier_name: cashierName,
+                products_sold: productsSold // Satılan ürünlerin tüm detayları
             });
+        }
+    
         setNumpadValue("");
-        Object.keys(mergedData).map(key => delOrders({ tableName: tableName, orderID: key }));
-        Object.keys(mergedData).map(key => delTempPay({ orderID: key }));
         setRefresh(refresh + 1);
     };
-
-    const onClickCash = () => {
-        const cashierName = getCurrentUserName(); // Kullanıcı adını al
-
-        editTotal({ tableName: tableName, total: (remainder - numpadValue) })
-            .then(() => {
-                setPaid(numpadValue);
-                setRemainder(remainder - numpadValue);
-                // Satış ürün detaylarını oluştur
-                const productsSold = Object.values(mergedData).map(order => ({
-                    product_name: products[order.productID]?.productName,
-                    quantity: order.quantity
-                }));
-                // Log ekleme
-                addLog({
-                    tableName: tableName,
-                    action: "Nakit",
-                    amount: numpadValue,
-                    payment_method: "Nakit",
-                    cashier_name: cashierName,  // Kasiyer adı ekleniyor
-                    products_sold: productsSold  // Satılan ürünlerin detayları ekleniyor
-                });
-            });
-        setNumpadValue("");
-        Object.keys(mergedData).map(key => delOrders({ tableName: tableName, orderID: key }));
-        Object.keys(mergedData).map(key => delTempPay({ orderID: key }));
-        setRefresh(refresh + 1);
-    };
+    
+    
+    
 
     return (
         <>
@@ -129,7 +146,7 @@ export default (props) => {
             <h3>Ödenen: {paid}₺</h3>
             <h1>Kalan: {remainder}₺</h1>
 
-            <Form.Control ref={numpad} required value={numpadValue} placeholder="Tahsil edilecek tutarı giriniz" style={{ marginBottom: "10px", marginTop: "10px" }} />
+            <Form.Control ref={numpad} required value={numpadValue} placeholder="Tahsil edilecek tutarı giriniz" style={{ marginBottom: "10px", marginTop: "10px" }} onChange={(e) => setNumpadValue(e.target.value)} />
 
             <Row style={{ marginBottom: "10px" }}>
                 <Col className="p-0">
@@ -141,10 +158,10 @@ export default (props) => {
 
             <Row style={{ marginTop: "10px" }}>
                 <Col className="p-0">
-                    <button onClick={onClickCredit} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#198754", color: "white" }} value="Kredi">Kredi Kartı</button>
+                    <button onClick={() => handlePayment("Kredi Kartı")} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#198754", color: "white" }} value="Kredi">Kredi Kartı</button>
                 </Col>
                 <Col className="p-0">
-                    <button onClick={onClickCash} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#0D6EFD", color: "white" }} value="Nakit">Nakit</button>
+                    <button onClick={() => handlePayment("Nakit")} style={{ width: "100%", height: "100px", fontSize: "1.5rem", fontWeight: "bold", display: "flex", justifyContent: "center", alignItems: "center", border: "0.1px solid #d0d0d0", backgroundColor: "#0D6EFD", color: "white" }} value="Nakit">Nakit</button>
                 </Col>
             </Row>
         </>

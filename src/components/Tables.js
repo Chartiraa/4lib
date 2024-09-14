@@ -1,14 +1,14 @@
 
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward } from '@fortawesome/free-solid-svg-icons';
-import { Col, Row, Card, Image, Button, Table, Dropdown, ProgressBar, ButtonGroup } from '@themesberg/react-bootstrap';
+import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { Col, Row, Card, Image, Button, Table, Modal, ProgressBar, Form } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
 
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
 import commands from "../data/commands";
 
-import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay, delOrders, delBaristaOrders } from "../data/DBFunctions";
+import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay, delOrders, delBaristaOrders, updateOrderQuantity, addBackToOrders, editTempPay } from "../data/DBFunctions";
 
 
 const ValueChange = ({ value, suffix }) => {
@@ -752,47 +752,101 @@ export const Orders = (props) => {
 };
 
 export const OrdersForPay = (props) => {
-
-  const { tableName, refresh, setRefresh, numpadValue, setNumpadValue } = props
-
+  const { tableName, refresh, setRefresh } = props;
   const [orders, setOrders] = useState({});
+  const [showModal, setShowModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [quantityToPay, setQuantityToPay] = useState(1);
 
   useEffect(() => {
-    getOrders(tableName).then(res => setOrders(res));
-  }, [refresh]);
+    getOrders(tableName).then((res) => setOrders(res));
+  }, [refresh, tableName]);
 
-  const payOrder = ({ orderID, productPrice }) => {
-    if (isNaN(parseInt(numpadValue))) {
-      tempPay({ orderID, productPrice });
+  const handlePayClick = (order) => {
+    const { quantity } = order;
+    if (quantity === 1) {
+      handleConfirmPayment(order, 1);
     } else {
-      tempPay({ orderID, productPrice });
+      setSelectedOrder(order);
+      setQuantityToPay(1);
+      setShowModal(true);
     }
-    setRefresh(refresh + 1);
-  }
+  };
 
-  const TableRow = (props) => {
-    const { productID, productName, productPrice, quantity, orderID } = props;
+  const handleConfirmPayment = (order, quantityToPay) => {
+    const { orderID, productName, productID, productPrice, quantity, extraShot, syrupFlavor, syrupAmount, milkType, productCategory } = order;
+  
+    // Eğer gerekli bilgiler eksikse, konsola hata yazdır ve işlemi durdur
+    if (!tableName || !orderID || !productID || !productName || !productPrice) {
+      console.error("TempPay'e ekleme yapılırken eksik veri bulundu:", { tableName, orderID, productID, productName, productPrice });
+      return;
+    }
+  
+    // Ödeme için seçilen miktarı kullanarak ekleme yap
+    tempPay(tableName, {
+      orderID,
+      productName,
+      productID,
+      productPrice,
+      quantity: quantityToPay,
+      extraShot,
+      syrupFlavor,
+      syrupAmount,
+      milkType,
+      productCategory
+    })
+      .then(() => {
+        if (quantityToPay < quantity) {
+          updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: quantity - quantityToPay })
+            .then(() => {
+              setRefresh(refresh + 1);
+            })
+            .catch((error) => {
+              console.error("Sipariş miktarı güncellenemedi:", error);
+            });
+        } else {
+          delOrders({ tableName: tableName, orderID: orderID })
+            .then(() => {
+              setRefresh(refresh + 1);
+            })
+            .catch((error) => {
+              console.error("Sipariş silinemedi:", error);
+            });
+        }
+      })
+      .catch((error) => {
+        console.error("TempPay kaydedilemedi:", error);
+      });
+  
+    setShowModal(false);
+  };
+  
 
+  const TableRow = ({ productName, productPrice, productID, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType }) => {
     return (
       <tr>
         <td>
-          <span className="fw-normal">
-            {productName}
-          </span>
+          <span className="fw-normal">{productName}</span>
+          <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>
+            {extraShot && extraShot.toLowerCase() !== 'yok' && <li>Shot: {extraShot}</li>}
+            {syrupFlavor && syrupFlavor.toLowerCase() !== 'yok' && syrupAmount && syrupAmount.toLowerCase() !== 'yok' && (
+              <li>Şurup: {syrupFlavor} ({syrupAmount})</li>
+            )}
+            {milkType && milkType.toLowerCase() !== 'normal' && <li>Süt: {milkType}</li>}
+          </ul>
         </td>
         <td>
-          <span className="fw-normal">
-            {quantity}
-          </span>
+          <span className="fw-normal">{quantity}</span>
         </td>
         <td>
-          <span className="fw-normal">
-            {productPrice}
-          </span>
+          <span className="fw-normal">{productPrice} TL</span>
         </td>
         <td>
-          <Button variant="outline-success" className="btn-icon-only btn-pill text-facebook" >
-            <FontAwesomeIcon icon={faCreditCard} onClick={() => payOrder({ orderID, productPrice })} />
+          <Button
+            variant="outline-success"
+            onClick={() => handlePayClick({ orderID, productName, productID, productPrice, quantity, extraShot, syrupFlavor, syrupAmount, milkType, productCategory: orders[orderID]?.productCategory })}
+          >
+            <FontAwesomeIcon icon={faCreditCard} />
           </Button>
         </td>
       </tr>
@@ -800,35 +854,68 @@ export const OrdersForPay = (props) => {
   };
 
   return (
-    <Card border="light" className="table-wrapper table-responsive shadow-sm">
-      <Card.Body className="pt-0">
-        <Table hover className="user-table align-items-center">
-          <thead>
-            <tr>
-              <th className="border-bottom">Ürün Adı</th>
-              <th className="border-bottom">Miktar</th>
-              <th className="border-bottom">Fiyat</th>
-              <th className="border-bottom">Ödeme</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(orders).map(key => <TableRow key={key} {...orders[key]} orderID={key} />)}
-          </tbody>
-        </Table>
-      </Card.Body>
-    </Card>
+    <>
+      <Card border="light" className="table-wrapper table-responsive shadow-sm">
+        <Card.Body className="pt-0">
+          <Table hover className="user-table align-items-center">
+            <thead>
+              <tr>
+                <th>Ürün Detayları</th>
+                <th>Miktar</th>
+                <th>Fiyat</th>
+                <th>Ödeme</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(orders).map((key) => (
+                <TableRow key={key} {...orders[key]} orderID={key} />
+              ))}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
+
+      {/* Adet Seçim Modalı */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>Ödenecek Adeti Seçin</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="d-flex justify-content-center align-items-center">
+            <Button
+              variant="outline-secondary"
+              onClick={() => setQuantityToPay((prev) => Math.max(1, prev - 1))}
+              className="me-3"
+            >
+              <FontAwesomeIcon icon={faMinus} />
+            </Button>
+            <span style={{ fontSize: '1.5rem' }}>{quantityToPay}</span>
+            <Button
+              variant="outline-secondary"
+              onClick={() => setQuantityToPay((prev) => Math.min(selectedOrder.quantity, prev + 1))}
+              className="ms-3"
+            >
+              <FontAwesomeIcon icon={faPlus} />
+            </Button>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>İptal</Button>
+          <Button variant="primary" onClick={() => handleConfirmPayment(selectedOrder, quantityToPay)}>Ödemeyi Onayla</Button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 
+
 export const OrdersForPaying = (props) => {
   const { refresh, setRefresh, numpadValue, setNumpadValue, tableName } = props;
-
   const [temp, setTemp] = useState({});
   const [orders, setOrders] = useState({});
 
   useEffect(() => {
-    // getTempPay ve getOrders fonksiyonlarını çağırarak verileri alıyoruz
-    getTempPay().then((tempData) => {
+    getTempPay(tableName).then((tempData) => {  // tableName ile temp verilerini çek
       setTemp(tempData);
       getOrders(tableName).then((orderData) => {
         setOrders(orderData);
@@ -836,55 +923,120 @@ export const OrdersForPaying = (props) => {
     });
   }, [refresh, tableName]);
 
-  // mergedData oluştur
-  const mergedData = Object.keys(temp).reduce((result, key) => {
-    if (orders[key]) {
-      result[key] = {
-        ...temp[key], // temp verisini al
-        ...orders[key], // orders verisini ekle
+  // MergedData oluştur
+  const mergedData = Object.keys(temp).reduce((result, orderID) => {
+    const orderData = temp[orderID]; // temp verisini kullan
+
+    if (orders[orderID]) {
+      result[orderID] = {
+        ...orders[orderID], // orders verisini kullan
+        ...orderData, // temp verisini ekle
+        quantity: orderData.quantity || orders[orderID].quantity, // Sadece seçilen miktarı kullan
       };
+    } else {
+      result[orderID] = { ...orderData }; // Sadece temp verisi varsa onu kullan
     }
     return result;
   }, {});
 
-  // Fiyatları toplayan useEffect
+  // Toplam fiyat hesapla ve numpadValue'ye ata
   useEffect(() => {
     const totalPrice = Object.values(mergedData).reduce(
-      (sum, { productPrice, quantity }) => sum + parseInt(productPrice) * parseInt(quantity),
+      (sum, { productPrice, quantity }) => sum + parseFloat(productPrice) * parseInt(quantity),
       0
     );
-    setNumpadValue(totalPrice); // Toplam fiyatı numpadValue'ye aktar
+    setNumpadValue(totalPrice.toFixed(2)); // Toplam fiyatı numpadValue'ye aktar
   }, [mergedData, setNumpadValue]);
 
-  // Ödeme fonksiyonu
-  const payOrder = ({ productPrice, orderID }) => {
-    if (!isNaN(parseInt(numpadValue))) {
-      setNumpadValue(parseInt(numpadValue) - parseInt(productPrice));
+  const handleReturnOrder = (order) => {
+    const { orderID, productName, productPrice, quantity, productID, extraShot, syrupFlavor, syrupAmount, milkType } = order;
+    const currentTempQuantity = parseInt(quantity, 10); // TempPay'deki mevcut miktar
+
+    // Eksik verileri kontrol et ve doldur
+    const filledOrder = {
+        orderID: orderID,
+        productID: productID || temp[orderID]?.productID || orders[orderID]?.productID,  // Temp veya Orders tablosundan al
+        productName: productName || temp[orderID]?.productName || orders[orderID]?.productName,  // Temp veya Orders tablosundan al
+        productPrice: productPrice || temp[orderID]?.productPrice || orders[orderID]?.productPrice,  // Temp veya Orders tablosundan al
+        quantity: 1,  // Geri eklenecek miktar daima 1 olacak
+        extraShot: extraShot || temp[orderID]?.extraShot || orders[orderID]?.extraShot || 'yok',  // Varsayılan değer
+        syrupFlavor: syrupFlavor || temp[orderID]?.syrupFlavor || orders[orderID]?.syrupFlavor || 'yok',  // Varsayılan değer
+        syrupAmount: syrupAmount || temp[orderID]?.syrupAmount || orders[orderID]?.syrupAmount || 'yok',  // Varsayılan değer
+        milkType: milkType || temp[orderID]?.milkType || orders[orderID]?.milkType || 'normal',  // Varsayılan değer
+        productCategory: orders[orderID]?.productCategory || temp[orderID]?.productCategory || '' // Kategori bilgisi ekle
+    };
+
+    // Eksik veya undefined alanlar hala varsa kontrol et
+    if (!filledOrder.productID || !filledOrder.productName || !filledOrder.productPrice) {
+        console.error("Eksik veya geçersiz sipariş bilgileri (doldurulmuş):", filledOrder);
+        return; // İşlemi durdur
     }
 
-    console.log(orderID);
-    delTempPay({ orderID });
-    setRefresh(refresh + 1);
-  };
+    // Orders tablosunda karşılık gelen siparişi bul
+    const matchingOrder = orders[orderID];
 
-  // TableRow bileşeni
-  const TableRow = ({ productID, productName, productPrice, quantity, orderID }) => {
+    if (matchingOrder) {
+        const currentOrderQuantity = parseInt(matchingOrder.quantity, 10); // Orders'taki mevcut miktar
+
+        // TempPay'deki miktarı 1 azalt ve Orders'taki miktarı 1 artır
+        editTempPay(tableName, orderID, -1)
+            .then(() => {
+                updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: currentOrderQuantity + 1 })
+                    .then(() => {
+                        setRefresh(refresh + 1); // Arayüzü yenile
+                    })
+                    .catch((error) => {
+                        console.error("Orders tablosu güncellenemedi:", error);
+                    });
+            })
+            .catch((error) => {
+                console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
+            });
+    } else {
+        // Eğer Orders tablosunda bu sipariş yoksa, yeni bir sipariş olarak ekle
+        const orderToAddBack = { ...filledOrder, quantity: 1 };  // `quantity`'yi elle 1 olarak ayarla
+
+        addBackToOrders({ tableName: tableName, order: orderToAddBack })
+            .then(() => {
+                // TempPay'den miktarı 1 azalt
+                editTempPay(tableName, orderID, -1)
+                    .then(() => {
+                        setRefresh(refresh + 1); // Arayüzü yenile
+                    })
+                    .catch((error) => {
+                        console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
+                    });
+            })
+            .catch((error) => {
+                console.error("Orders tablosuna yeni sipariş eklenemedi:", error);
+            });
+    }
+};
+
+
+  const TableRow = ({ productName, productPrice, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType }) => {
     return (
       <tr>
         <td>
           <span className="fw-normal">{productName}</span>
+          <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>
+            {extraShot && extraShot.toLowerCase() !== 'yok' && <li style={{ fontSize: '0.7rem' }}>Shot: {extraShot}</li>}
+            {syrupFlavor && syrupFlavor.toLowerCase() !== 'yok' && syrupAmount && syrupAmount.toLowerCase() !== 'yok' && (
+              <li style={{ fontSize: '0.7rem' }}>Şurup: {syrupFlavor} ({syrupAmount})</li>
+            )}
+            {milkType && milkType.toLowerCase() !== 'normal' && <li style={{ fontSize: '0.7rem' }}>Süt: {milkType}</li>}
+          </ul>
         </td>
         <td>
           <span className="fw-normal">{quantity}</span>
         </td>
         <td>
-          <span className="fw-normal">{productPrice}</span>
+          <span className="fw-normal">{productPrice} TL</span>
         </td>
         <td>
           <Button
-            variant="outline-success"
-            className="btn-icon-only btn-pill text-facebook"
-            onClick={() => payOrder({ productPrice, orderID })}
+            variant="outline-danger"
+            onClick={() => handleReturnOrder({ productName, productPrice, quantity, orderID })}
           >
             <FontAwesomeIcon icon={faBackward} />
           </Button>
@@ -899,10 +1051,10 @@ export const OrdersForPaying = (props) => {
         <Table hover className="user-table align-items-center">
           <thead>
             <tr>
-              <th className="border-bottom">Ürün Adı</th>
-              <th className="border-bottom">Miktar</th>
-              <th className="border-bottom">Fiyat</th>
-              <th className="border-bottom">Geri Al</th>
+              <th>Ürün Detayları</th>
+              <th>Miktar</th>
+              <th>Fiyat</th>
+              <th>İşlemler</th>
             </tr>
           </thead>
           <tbody>

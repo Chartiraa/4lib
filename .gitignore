@@ -2,6 +2,7 @@ node_modules/
 build/
 .DS_Store
 firebaseConfig.js
+firebaseConfig.txt
 buildd.zip
 .gitignore
 build.zip
