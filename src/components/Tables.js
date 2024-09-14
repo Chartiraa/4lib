@@ -828,11 +828,11 @@ export const OrdersForPay = (props) => {
         <td>
           <span className="fw-normal">{productName}</span>
           <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>
-            {extraShot && extraShot.toLowerCase() !== 'yok' && <li>Shot: {extraShot}</li>}
+            {extraShot && extraShot.toLowerCase() !== 'yok' && <li style={{ fontSize: '0.7rem' }}>Shot: {extraShot}</li>}
             {syrupFlavor && syrupFlavor.toLowerCase() !== 'yok' && syrupAmount && syrupAmount.toLowerCase() !== 'yok' && (
-              <li>Şurup: {syrupFlavor} ({syrupAmount})</li>
+              <li style={{ fontSize: '0.7rem' }}>Şurup: {syrupFlavor} ({syrupAmount})</li>
             )}
-            {milkType && milkType.toLowerCase() !== 'normal' && <li>Süt: {milkType}</li>}
+            {milkType && milkType.toLowerCase() !== 'normal' && <li style={{ fontSize: '0.7rem' }}>Süt: {milkType}</li>}
           </ul>
         </td>
         <td>

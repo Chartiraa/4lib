@@ -287,21 +287,20 @@ export async function tempPay(tableName, props) {
 
     const isCoffeeCategory = props.productCategory && props.productCategory.includes('Kahve');
 
+    // Tüm ek özellikler dahil olarak tempData oluştur
     const tempData = {
         orderID: props.orderID,
         productID: props.productID,
         productName: props.productName,
         productPrice: props.productPrice,
         quantity: props.quantity,
-        lastEditDate: formatDate()
+        lastEditDate: formatDate(),
+        extraShot: props.extraShot || "Yok",
+        syrupFlavor: props.syrupFlavor || "Yok",
+        syrupAmount: props.syrupAmount || "Tek",
+        milkType: props.milkType || "Normal",
+        productCategory: props.productCategory || ""
     };
-
-    if (isCoffeeCategory) {
-        tempData.extraShot = props.extraShot || "Yok";
-        tempData.syrupFlavor = props.syrupFlavor || "Yok";
-        tempData.syrupAmount = props.syrupAmount || "Tek";
-        tempData.milkType = props.milkType || "Normal";
-    }
 
     try {
         const tempRef = ref(db, `Cafe/Temp/${tableName}/${props.orderID}`);
@@ -316,9 +315,9 @@ export async function tempPay(tableName, props) {
 
             // Yeni miktarı doğrudan güncellemek yerine mevcut miktarı ekleyin
             const newQuantity = currentQuantity + props.quantity;
-            
-            // Sadece miktarı güncelle
-            await update(tempRef, { quantity: newQuantity, lastEditDate: formatDate() });
+
+            // Güncellenmiş tüm ek özelliklerle birlikte miktarı güncelle
+            await update(tempRef, { ...currentData, quantity: newQuantity, lastEditDate: formatDate() });
             console.log(`Temp'te güncellendi: Masa - ${tableName}, Sipariş - ${props.orderID}, Yeni Miktar: ${newQuantity}`);
         } else {
             // Eğer kayıt yoksa, yeni veri ekle
@@ -330,6 +329,7 @@ export async function tempPay(tableName, props) {
         console.error("TempPay işlemi sırasında bir hata oluştu:", error);
     }
 }
+
 
 export async function editTempPay(tableName, orderID, quantityChange) {
     if (!tableName || !orderID || typeof quantityChange !== 'number') {
@@ -344,7 +344,7 @@ export async function editTempPay(tableName, orderID, quantityChange) {
         const snapshot = await get(tempRef);
 
         if (snapshot.exists()) {
-            // Eğer kayıt varsa, miktarı güncelle
+            // Eğer kayıt varsa, mevcut veriyi alın
             const currentData = snapshot.val();
             const currentQuantity = currentData.quantity || 0;
             const newQuantity = currentQuantity + quantityChange;
@@ -354,8 +354,8 @@ export async function editTempPay(tableName, orderID, quantityChange) {
                 await remove(tempRef);
                 console.log(`Temp'ten silindi: Masa - ${tableName}, Sipariş - ${orderID}`);
             } else {
-                // Sadece miktarı güncelle
-                await update(tempRef, { quantity: newQuantity, lastEditDate: formatDate() });
+                // Mevcut veriyi koruyarak yalnızca miktarı ve son düzenleme tarihini güncelle
+                await update(tempRef, { ...currentData, quantity: newQuantity, lastEditDate: formatDate() });
                 console.log(`Temp'te güncellendi: Masa - ${tableName}, Sipariş - ${orderID}, Yeni Miktar: ${newQuantity}`);
             }
         } else {
@@ -365,7 +365,6 @@ export async function editTempPay(tableName, orderID, quantityChange) {
         console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
     }
 }
-  
 
 export async function delTempPay(props) {
     await remove(ref(db, 'Cafe/Temp/' + props.orderID + '/'))
