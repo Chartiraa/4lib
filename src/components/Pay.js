@@ -17,7 +17,7 @@ export default (props) => {
     useEffect(() => {
         getOrders(tableName).then(res => setOrders(res));
         getProducts().then(res => setProducts(res));
-        getTempPay().then(res => setTemp(res));
+        getTempPay(tableName).then(res => setTemp(res));
     }, [refresh]);
 
     useEffect(() => {
@@ -40,7 +40,7 @@ export default (props) => {
             Object.values(orders).forEach(order => {
                 const product = products[order.productID];
                 if (product) {
-                    total += order.quantity * product.productPrice;
+                    total += order.quantity * order.productPrice;
                 }
             });
         }
@@ -56,71 +56,81 @@ export default (props) => {
     };
 
     const onClickAll = () => {
-        // Tüm siparişler için tempPay fonksiyonunu tetikle
+        // Tüm siparişler için tempPay fonksiyonunu tetikle ve ardından Orders tablosundan sil
         Object.keys(orders).forEach(orderID => {
             const order = orders[orderID];
-            tempPay({ orderID, productPrice: products[order.productID]?.productPrice }); // tempPay fonksiyonu çağrılıyor
+
+            // tempPay için gerekli tüm bilgileri ayarlayalım
+            const tempOrderData = {
+                orderID,
+                productID: order.productID,
+                productName: order.productName,
+                productPrice: products[order.productID]?.productPrice,
+                quantity: order.quantity,
+                productCategory: order.productCategory, // Kategori bilgisi
+                extraShot: order.extraShot || "Yok", // Ekstra shot bilgisi
+                syrupFlavor: order.syrupFlavor || "Yok", // Şurup çeşidi
+                syrupAmount: order.syrupAmount || "Tek", // Şurup miktarı
+                milkType: order.milkType || "Normal" // Süt tipi
+            };
+
+            // tempPay fonksiyonunu tableName ile birlikte çağır
+            tempPay(tableName, tempOrderData)
+                .then(() => {
+                    // Temp'e eklendikten sonra, Orders tablosundan siparişi sil
+                    delOrders({ tableName, orderID })
+                        .then(() => {
+                            setRefresh(refresh + 1); // Arayüzü yenile
+
+                            console.log(`Orders'tan silindi: Masa - ${tableName}, Sipariş - ${orderID}`);
+                        })
+                        .catch(error => {
+                            console.error("Orders'tan silme işlemi sırasında bir hata oluştu:", error);
+                        });
+                })
+                .catch(error => {
+                    console.error("TempPay işlemi sırasında bir hata oluştu:", error);
+                });
         });
-    
-        setRefresh(refresh + 1);  // Arayüzü yenile
+
     };
 
-    const onClickHalf = () => {
-        setNumpadValue(remainder / 2);
-    };
+
 
     const handlePayment = (paymentMethod) => {
         const cashierName = getCurrentUserName(); // Kullanıcı adını al
         const productsSold = []; // Satılan ürünlerin tüm detaylarını tutacak dizi
         let totalAmount = 0; // Toplam tutarı hesaplamak için değişken
-    
+
         // getTempPay ile alınan tüm siparişler üzerinde işlem yap
         Object.keys(temp).forEach(tempKey => {
             const tempOrder = temp[tempKey]; // TempPay'den gelen sipariş
             const tempQuantity = parseInt(tempOrder.quantity, 10); // Ödenmek istenen miktar
-    
-            // getOrders'dan gelen tabloyu kontrol et
-            const matchingOrder = orders[tempOrder.orderID]; // Orders'dan gelen ilgili sipariş
-            if (matchingOrder) {
-                const currentQuantity = parseInt(matchingOrder.quantity, 10); // Mevcut sipariş miktarı
-    
-                if (!isNaN(tempQuantity) && !isNaN(currentQuantity)) {
-                    const productName = tempOrder.productName || "Ürün adı bulunamadı";
-                    if (!productName || productName === "Ürün adı bulunamadı") {
-                        console.error(`Geçersiz ürün adı: ${tempOrder.productID}`);
-                        return; // Hata durumunda işlemi sonlandır
-                    }
-    
-                    if (tempQuantity === currentQuantity) {
-                        // Eğer miktarlar eşitse, siparişi hem Orders hem de TempPay'den sil
-                        delOrders({ tableName: tableName, orderID: tempOrder.orderID });
-                        delTempPay({ orderID: tempOrder.orderID });
-                    } else if (tempQuantity < currentQuantity) {
-                        // Eğer ödenmek istenen miktar mevcut miktardan küçükse
-                        const remainingQuantity = currentQuantity - tempQuantity;
-    
-                        // Orders tablosunu güncelle
-                        updateOrderQuantity({ tableName: tableName, orderID: tempOrder.orderID, quantity: remainingQuantity });
-    
-                        // TempPay tablosundan siparişi sil
-                        delTempPay({ orderID: tempOrder.orderID });
-                    } else {
-                        console.error(`Geçersiz miktar veya mevcut miktar (orderID: ${tempOrder.orderID}):`, tempOrder);
-                        return;
-                    }
-    
-                    // Satılan ürünler dizisine ekle
-                    productsSold.push({
-                        product_name: productName, // Ürün adı artık kesin olarak tanımlı
-                        quantity: tempQuantity // Sadece ödenen miktar için log
-                    });
-    
-                    // Toplam tutarı artır
-                    totalAmount += tempQuantity * parseFloat(tempOrder.productPrice);
+            console.log(`Sipariş: - Miktar: `);
+
+            console.log(`Sipariş: ${tempKey} - Miktar: ${tempQuantity}`);
+
+            if (!isNaN(tempQuantity)) {
+                const productName = tempOrder.productName || "Ürün adı bulunamadı";
+                if (!productName || productName === "Ürün adı bulunamadı") {
+                    console.error(`Geçersiz ürün adı: ${tempOrder.productID}`);
+                    return; // Hata durumunda işlemi sonlandır
                 }
+
+                // Satılan ürünler dizisine ekle
+                productsSold.push({
+                    product_name: productName, // Ürün adı
+                    quantity: tempQuantity // Satılan miktar
+                });
+
+                // Toplam tutarı artır
+                totalAmount += tempQuantity * parseFloat(tempOrder.productPrice);
+
+                // TempPay tablosundan siparişi sil
+                delTempPay(tableName, tempOrder.orderID);
             }
         });
-    
+
         // Satış işlemi için log ekleme
         if (productsSold.length > 0) {
             addLog({
@@ -132,13 +142,11 @@ export default (props) => {
                 products_sold: productsSold // Satılan ürünlerin tüm detayları
             });
         }
-    
+
         setNumpadValue("");
         setRefresh(refresh + 1);
     };
-    
-    
-    
+
 
     return (
         <>

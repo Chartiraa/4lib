@@ -8,7 +8,7 @@ import Swal from "sweetalert2";
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
 import commands from "../data/commands";
 
-import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, delTempPay, delOrders, delBaristaOrders, updateOrderQuantity, addBackToOrders, editTempPay } from "../data/DBFunctions";
+import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, getProductCategory, delOrders, delBaristaOrders, updateOrderQuantity, addBackToOrders, editTempPay, editOrders } from "../data/DBFunctions";
 
 
 const ValueChange = ({ value, suffix }) => {
@@ -552,7 +552,6 @@ export const ProductsTable = ({ refresh }) => {
   );
 };
 
-
 export const CategoriesTable = (refresh) => {
 
   const [categories, setCategories] = useState({});
@@ -692,11 +691,159 @@ export const CategoriesTable = (refresh) => {
   );
 };
 
-export const Orders = (props) => {
+export const EditOrderModal = ({ show, handleClose, orderData, handleSave }) => {
+  const [quantity, setQuantity] = useState(orderData.quantity || 1);
+  const [extraShot, setExtraShot] = useState(orderData.extraShot || "Yok");
+  const [syrupFlavor, setSyrupFlavor] = useState(orderData.syrupFlavor || "Yok");
+  const [syrupAmount, setSyrupAmount] = useState(orderData.syrupAmount || "Tek");
+  const [milkType, setMilkType] = useState(orderData.milkType || "Normal");
 
-  const { tableName, refresh } = props
+  // `isCoffeeCategory` doğrudan `orderData`'dan alınır
+  const isCoffeeCategory = orderData.isCoffeeCategory;
+
+  useEffect(() => {
+    if (!show) {
+      resetState();
+    }
+  }, [show, orderData]);
+
+  const resetState = () => {
+    setQuantity(orderData.quantity || 1);
+    setExtraShot(orderData.extraShot || "Yok");
+    setSyrupFlavor(orderData.syrupFlavor || "Yok");
+    setSyrupAmount(orderData.syrupAmount || "Tek");
+    setMilkType(orderData.milkType || "Normal");
+  };
+
+  const handleSaveClick = () => {
+    const updatedOrder = {
+      ...orderData,
+      quantity,
+      ...(isCoffeeCategory && { extraShot, syrupFlavor, syrupAmount, milkType }) // Sadece kahve kategorisinde ek özellikleri ekleyin
+    };
+    handleSave(updatedOrder);
+    handleClose();
+    resetState();  // Kaydettikten sonra state'leri sıfırla
+  };
+
+  return (
+    <Modal
+      show={show}
+      onHide={handleClose}
+      centered // Modalı ekranın ortasında göstermek için ekledik
+    >
+      <Modal.Header closeButton>
+        <Modal.Title style={{ textAlign: 'center', width: '100%' }}>Sipariş Düzenle</Modal.Title>
+      </Modal.Header>
+      <Modal.Body style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        {/* Kahve kategorisi ise ek özellikler gösterilir */}
+        {isCoffeeCategory ? (
+          <>
+            <Form.Group controlId="extraShot" style={{ textAlign: 'center', width: '100%' }}>
+              <Form.Label>Ekstra Shot</Form.Label>
+              <div>
+                {["Yok", "Tek", "Double", "Triple"].map((shot) => (
+                  <Button
+                    key={shot}
+                    variant={extraShot === shot ? "primary" : "outline-primary"}
+                    onClick={() => setExtraShot(shot)}
+                    className="me-2"
+                  >
+                    {shot}
+                  </Button>
+                ))}
+              </div>
+            </Form.Group>
+            <Form.Group controlId="syrupFlavor" style={{ textAlign: 'center', width: '100%', marginTop: '15px' }}>
+              <Form.Label>Şurup Seçimi</Form.Label>
+              <div>
+                {["Yok", "Vanilya", "Karamel", "Fındık"].map((flavor) => (
+                  <Button
+                    key={flavor}
+                    variant={syrupFlavor === flavor ? "primary" : "outline-primary"}
+                    onClick={() => setSyrupFlavor(flavor)}
+                    className="me-2"
+                  >
+                    {flavor}
+                  </Button>
+                ))}
+              </div>
+            </Form.Group>
+            {/* Şurup seçimi yapılmışsa şurup miktarını göster */}
+            {syrupFlavor && syrupFlavor.toLowerCase() !== "yok" && (
+              <Form.Group controlId="syrupAmount" style={{ textAlign: 'center', width: '100%', marginTop: '15px' }}>
+                <Form.Label>Şurup Miktarı</Form.Label>
+                <div>
+                  {["Tek", "Double"].map((amount) => (
+                    <Button
+                      key={amount}
+                      variant={syrupAmount === amount ? "primary" : "outline-primary"}
+                      onClick={() => setSyrupAmount(amount)}
+                      className="me-2"
+                    >
+                      {amount}
+                    </Button>
+                  ))}
+                </div>
+              </Form.Group>
+            )}
+            <Form.Group controlId="milkType" style={{ textAlign: 'center', width: '100%', marginTop: '15px' }}>
+              <Form.Label>Süt Tipi</Form.Label>
+              <div>
+                {["Normal", "Laktozsuz"].map((type) => (
+                  <Button
+                    key={type}
+                    variant={milkType === type ? "primary" : "outline-primary"}
+                    onClick={() => setMilkType(type)}
+                    className="me-2"
+                  >
+                    {type}
+                  </Button>
+                ))}
+              </div>
+            </Form.Group>
+          </>
+        ) : null}
+        {/* Adet düzenleme kısmı her iki kategori için de gösterilir */}
+        <Form.Group controlId="quantity" style={{ textAlign: 'center', width: '100%', marginTop: '15px' }}>
+          <Form.Label>Adet</Form.Label>
+          <div className="d-flex justify-content-center align-items-center">
+            <Button
+              variant="outline-secondary"
+              onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+              className="me-3"
+            >
+              -
+            </Button>
+            <span style={{ fontSize: '1.5rem' }}>{quantity}</span>
+            <Button
+              variant="outline-secondary"
+              onClick={() => setQuantity((prev) => prev + 1)}
+              className="ms-3"
+            >
+              +
+            </Button>
+          </div>
+        </Form.Group>
+      </Modal.Body>
+      <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>
+          İptal
+        </Button>
+        <Button variant="primary" onClick={handleSaveClick}>
+          Kaydet
+        </Button>
+      </Modal.Footer>
+    </Modal>
+  );
+};
+
+export const Orders = (props) => {
+  const { tableName, refresh, setRefresh } = props;
 
   const [orders, setOrders] = useState({});
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     getOrders(tableName).then(res => setOrders(res));
@@ -706,11 +853,57 @@ export const Orders = (props) => {
     delOrders(props);
     delBaristaOrders(props.tableName, props.orderID);
     getOrders(props.tableName).then(res => setOrders(res));
+  };
 
-  }
+  const openEditModal = async (order) => {
+    // Ürün kategorisini almak için getProductCategory fonksiyonunu kullan
+    const productCategory = await getProductCategory(order.productID);
+
+    // Ürün kategorisini kontrol et ve modal içeriğini ayarla
+    const isCoffeeCategory = productCategory.includes('Kahve');
+
+    // Eğer kahve kategorisinde değilse, yalnızca adet değişikliği yapılabilen modal açılmalı
+    setSelectedOrder({ ...order, isCoffeeCategory });
+    setShowEditModal(true);
+};
+
+
+  const handleSaveChanges = async (updatedOrder) => {
+    if (!updatedOrder.orderID || !updatedOrder.productID || !updatedOrder.productName || !updatedOrder.productPrice) {
+        console.error("Eksik parametreler ile işlem yapılmaya çalışılıyor:", updatedOrder);
+        return;
+    }
+
+    // Ürün kategorisini al
+    const productCategory = await getProductCategory(updatedOrder.productID);
+    if (!productCategory) {
+        console.error("Ürün kategorisi alınamadı:", updatedOrder.productID);
+        return;
+    }
+
+    console.log("Ürün Kategorisi:", productCategory);
+
+    // Güncellenmiş sipariş verilerini kullanarak edit işlemini yap
+    editOrders({
+        tableName: tableName,
+        orderID: updatedOrder.orderID,
+        productID: updatedOrder.productID,
+        productName: updatedOrder.productName,
+        productPrice: updatedOrder.productPrice,
+        quantity: updatedOrder.quantity,
+        productCategory: productCategory, // Yeni kategori bilgisi
+        extraShot: updatedOrder.extraShot,
+        syrupFlavor: updatedOrder.syrupFlavor,
+        syrupAmount: updatedOrder.syrupAmount,
+        milkType: updatedOrder.milkType
+    }).then(() => {
+        setRefresh(refresh + 1);
+    });
+};
+
 
   const TableRow = (props) => {
-    const { productID, productName, quantity, orderID } = props;
+    const { productID, productName, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType, productCategory } = props;
 
     return (
       <tr>
@@ -718,6 +911,14 @@ export const Orders = (props) => {
           <span className="fw-normal">
             {productName}
           </span>
+          {/* Ürün detaylarını göster */}
+          <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>
+            {extraShot && extraShot.toLowerCase() !== 'yok' && <li style={{ fontSize: '0.7rem' }}>Shot: {extraShot}</li>}
+            {syrupFlavor && syrupFlavor.toLowerCase() !== 'yok' && syrupAmount && syrupAmount.toLowerCase() !== 'yok' && (
+              <li style={{ fontSize: '0.7rem' }}>Şurup: {syrupFlavor} ({syrupAmount})</li>
+            )}
+            {milkType && milkType.toLowerCase() !== 'normal' && <li style={{ fontSize: '0.7rem' }}>Süt: {milkType}</li>}
+          </ul>
         </td>
         <td>
           <span className="fw-normal">
@@ -725,6 +926,7 @@ export const Orders = (props) => {
           </span>
         </td>
         <td>
+          <FontAwesomeIcon icon={faEdit} className="text-primary me-3" style={{ cursor: "pointer" }} onClick={() => openEditModal(props)} />
           <FontAwesomeIcon icon={faTrashAlt} className="text-danger" style={{ cursor: "pointer" }} onClick={() => deleteOrder({ tableName, orderID })} />
         </td>
       </tr>
@@ -732,22 +934,34 @@ export const Orders = (props) => {
   };
 
   return (
-    <Card border="light" className="table-wrapper table-responsive shadow-sm">
-      <Card.Body className="pt-0">
-        <Table hover className="user-table align-items-center">
-          <thead>
-            <tr>
-              <th className="border-bottom">Ürün Adı</th>
-              <th className="border-bottom">Miktar</th>
-              <th className="border-bottom">Sil</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.keys(orders).map(key => <TableRow key={key} {...orders[key]} />)}
-          </tbody>
-        </Table>
-      </Card.Body>
-    </Card>
+    <>
+      <Card border="light" className="table-wrapper table-responsive shadow-sm">
+        <Card.Body className="pt-0">
+          <Table hover className="user-table align-items-center">
+            <thead>
+              <tr>
+                <th className="border-bottom">Ürün Adı</th>
+                <th className="border-bottom">Miktar</th>
+                <th className="border-bottom">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.keys(orders).map(key => <TableRow key={key} {...orders[key]} />)}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
+
+      {selectedOrder && (
+        <EditOrderModal
+          show={showEditModal}
+          handleClose={() => setShowEditModal(false)}
+          orderData={selectedOrder}
+          handleSave={handleSaveChanges}
+          productCategory={selectedOrder.productCategory} // Bu satır eklendi
+        />
+      )}
+    </>
   );
 };
 
@@ -775,13 +989,13 @@ export const OrdersForPay = (props) => {
 
   const handleConfirmPayment = (order, quantityToPay) => {
     const { orderID, productName, productID, productPrice, quantity, extraShot, syrupFlavor, syrupAmount, milkType, productCategory } = order;
-  
+
     // Eğer gerekli bilgiler eksikse, konsola hata yazdır ve işlemi durdur
     if (!tableName || !orderID || !productID || !productName || !productPrice) {
       console.error("TempPay'e ekleme yapılırken eksik veri bulundu:", { tableName, orderID, productID, productName, productPrice });
       return;
     }
-  
+
     // Ödeme için seçilen miktarı kullanarak ekleme yap
     tempPay(tableName, {
       orderID,
@@ -817,10 +1031,10 @@ export const OrdersForPay = (props) => {
       .catch((error) => {
         console.error("TempPay kaydedilemedi:", error);
       });
-  
+
     setShowModal(false);
   };
-  
+
 
   const TableRow = ({ productName, productPrice, productID, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType }) => {
     return (
@@ -908,7 +1122,6 @@ export const OrdersForPay = (props) => {
   );
 };
 
-
 export const OrdersForPaying = (props) => {
   const { refresh, setRefresh, numpadValue, setNumpadValue, tableName } = props;
   const [temp, setTemp] = useState({});
@@ -954,64 +1167,64 @@ export const OrdersForPaying = (props) => {
 
     // Eksik verileri kontrol et ve doldur
     const filledOrder = {
-        orderID: orderID,
-        productID: productID || temp[orderID]?.productID || orders[orderID]?.productID,  // Temp veya Orders tablosundan al
-        productName: productName || temp[orderID]?.productName || orders[orderID]?.productName,  // Temp veya Orders tablosundan al
-        productPrice: productPrice || temp[orderID]?.productPrice || orders[orderID]?.productPrice,  // Temp veya Orders tablosundan al
-        quantity: 1,  // Geri eklenecek miktar daima 1 olacak
-        extraShot: extraShot || temp[orderID]?.extraShot || orders[orderID]?.extraShot || 'yok',  // Varsayılan değer
-        syrupFlavor: syrupFlavor || temp[orderID]?.syrupFlavor || orders[orderID]?.syrupFlavor || 'yok',  // Varsayılan değer
-        syrupAmount: syrupAmount || temp[orderID]?.syrupAmount || orders[orderID]?.syrupAmount || 'yok',  // Varsayılan değer
-        milkType: milkType || temp[orderID]?.milkType || orders[orderID]?.milkType || 'normal',  // Varsayılan değer
-        productCategory: orders[orderID]?.productCategory || temp[orderID]?.productCategory || '' // Kategori bilgisi ekle
+      orderID: orderID,
+      productID: productID || temp[orderID]?.productID || orders[orderID]?.productID,  // Temp veya Orders tablosundan al
+      productName: productName || temp[orderID]?.productName || orders[orderID]?.productName,  // Temp veya Orders tablosundan al
+      productPrice: productPrice || temp[orderID]?.productPrice || orders[orderID]?.productPrice,  // Temp veya Orders tablosundan al
+      quantity: 1,  // Geri eklenecek miktar daima 1 olacak
+      extraShot: extraShot || temp[orderID]?.extraShot || orders[orderID]?.extraShot || 'yok',  // Varsayılan değer
+      syrupFlavor: syrupFlavor || temp[orderID]?.syrupFlavor || orders[orderID]?.syrupFlavor || 'yok',  // Varsayılan değer
+      syrupAmount: syrupAmount || temp[orderID]?.syrupAmount || orders[orderID]?.syrupAmount || 'yok',  // Varsayılan değer
+      milkType: milkType || temp[orderID]?.milkType || orders[orderID]?.milkType || 'normal',  // Varsayılan değer
+      productCategory: orders[orderID]?.productCategory || temp[orderID]?.productCategory || '' // Kategori bilgisi ekle
     };
 
     // Eksik veya undefined alanlar hala varsa kontrol et
     if (!filledOrder.productID || !filledOrder.productName || !filledOrder.productPrice) {
-        console.error("Eksik veya geçersiz sipariş bilgileri (doldurulmuş):", filledOrder);
-        return; // İşlemi durdur
+      console.error("Eksik veya geçersiz sipariş bilgileri (doldurulmuş):", filledOrder);
+      return; // İşlemi durdur
     }
 
     // Orders tablosunda karşılık gelen siparişi bul
     const matchingOrder = orders[orderID];
 
     if (matchingOrder) {
-        const currentOrderQuantity = parseInt(matchingOrder.quantity, 10); // Orders'taki mevcut miktar
+      const currentOrderQuantity = parseInt(matchingOrder.quantity, 10); // Orders'taki mevcut miktar
 
-        // TempPay'deki miktarı 1 azalt ve Orders'taki miktarı 1 artır
-        editTempPay(tableName, orderID, -1)
+      // TempPay'deki miktarı 1 azalt ve Orders'taki miktarı 1 artır
+      editTempPay(tableName, orderID, -1)
+        .then(() => {
+          updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: currentOrderQuantity + 1 })
             .then(() => {
-                updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: currentOrderQuantity + 1 })
-                    .then(() => {
-                        setRefresh(refresh + 1); // Arayüzü yenile
-                    })
-                    .catch((error) => {
-                        console.error("Orders tablosu güncellenemedi:", error);
-                    });
+              setRefresh(refresh + 1); // Arayüzü yenile
             })
             .catch((error) => {
-                console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
+              console.error("Orders tablosu güncellenemedi:", error);
             });
+        })
+        .catch((error) => {
+          console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
+        });
     } else {
-        // Eğer Orders tablosunda bu sipariş yoksa, yeni bir sipariş olarak ekle
-        const orderToAddBack = { ...filledOrder, quantity: 1 };  // `quantity`'yi elle 1 olarak ayarla
+      // Eğer Orders tablosunda bu sipariş yoksa, yeni bir sipariş olarak ekle
+      const orderToAddBack = { ...filledOrder, quantity: 1 };  // `quantity`'yi elle 1 olarak ayarla
 
-        addBackToOrders({ tableName: tableName, order: orderToAddBack })
+      addBackToOrders({ tableName: tableName, order: orderToAddBack })
+        .then(() => {
+          // TempPay'den miktarı 1 azalt
+          editTempPay(tableName, orderID, -1)
             .then(() => {
-                // TempPay'den miktarı 1 azalt
-                editTempPay(tableName, orderID, -1)
-                    .then(() => {
-                        setRefresh(refresh + 1); // Arayüzü yenile
-                    })
-                    .catch((error) => {
-                        console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
-                    });
+              setRefresh(refresh + 1); // Arayüzü yenile
             })
             .catch((error) => {
-                console.error("Orders tablosuna yeni sipariş eklenemedi:", error);
+              console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
             });
+        })
+        .catch((error) => {
+          console.error("Orders tablosuna yeni sipariş eklenemedi:", error);
+        });
     }
-};
+  };
 
 
   const TableRow = ({ productName, productPrice, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType }) => {
@@ -1067,7 +1280,6 @@ export const OrdersForPaying = (props) => {
     </Card>
   );
 };
-
 
 export const CommandsTable = () => {
   const TableRow = (props) => {

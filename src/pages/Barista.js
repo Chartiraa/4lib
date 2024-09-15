@@ -40,7 +40,7 @@ export default function BaristaTable() {
       if (result.isConfirmed) {
         delBaristaOrders(tableName, orderID)
           .then(() => {
-            Swal.fire("Sipariş hazır!", "", "success");
+
             setOrders(prevOrders => prevOrders.filter(order => !(order.tableName === tableName && order.orderID === orderID)));
           })
           .catch(error => {

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faQrcode } from "@fortawesome/free-solid-svg-icons";
 import { Col, Row, Form, Button, Modal } from '@themesberg/react-bootstrap';
 import { useParams } from "react-router-dom";
 import { ScrollPanel } from 'primereact/scrollpanel';
@@ -104,11 +106,16 @@ export default () => {
         <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingInline: isXLargeScreen ? '2.5rem' : '1rem' }}>
                 <label className="text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{decodedTableName !== 'TakeAway' ? 'Masa - ' + decodedTableName : decodedTableName}</label>
-                <Button variant="primary" style={{ backgroundColor: '#eeeeee', border: '1px solid #262B40', color: '#262B40' }} onClick={() => moveTable()}>Masa Taşı</Button>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <Button variant="outline-success" className="btn-icon-only btn-pill text-dark me-2" >
+                        <FontAwesomeIcon icon={faQrcode} style={{ fontSize: '1.5rem' }} />
+                    </Button>
+                    <Button variant="primary" style={{ backgroundColor: '#eeeeee', border: '1px solid #262B40', color: '#262B40' }} onClick={() => moveTable()}>Masa Taşı</Button>
+                </div>
             </div>
             <Row>
                 <Col xs={12} xl={5}>
-                    <Orders refresh={refresh} tableName={decodedTableName} />
+                    <Orders refresh={refresh} setRefresh={setRefresh} tableName={decodedTableName} />
                 </Col>
                 <Col xs={12} xl={3}>
                     {isXLargeScreen ? (

@@ -122,7 +122,7 @@ export default (props = {}) => {
               <Dropdown.Divider className="my-2" style={{ borderColor: "#1a1a1a" }} />
 
 
-              <label className="upgrade-to-pro" style={{ marginBottom: '4rem', color: "#1a1a1a", fontWeight: 'bold', fontSize: '20px', overflow: 'hidden', whiteSpace: 'wrap', textOverflow: 'ellipsis', textAlign: 'center' }}>{getCurrentUserName()}</label>
+              {/*<label className="upgrade-to-pro" style={{ marginBottom: '4rem', color: "#1a1a1a", fontWeight: 'bold', fontSize: '20px', overflow: 'hidden', whiteSpace: 'wrap', textOverflow: 'ellipsis', textAlign: 'center' }}>{getCurrentUserName()}</label>*/}
               <Button variant="danger" className="upgrade-to-pro" onClick={handleLogout}>
                 <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Çıkış Yap
               </Button>

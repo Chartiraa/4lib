@@ -189,11 +189,55 @@ export async function addOrder(props) {
     const datenow = Date.now();
     const isCoffeeCategory = props.productCategory && props.productCategory.includes('Kahve'); // Ürün kategorisi kontrolü
 
+    // Ekstra özelliklere göre fiyat hesaplama
+    let additionalCost = 0;
+    if (isCoffeeCategory) {
+        // Ekstra Shot fiyat hesaplaması
+        if (props.extraShot && props.extraShot.toLowerCase() !== 'yok') {
+            switch (props.extraShot.toLowerCase()) {
+                case 'tek':
+                    additionalCost += 10;
+                    break;
+                case 'double':
+                    additionalCost += 20;
+                    break;
+                case 'triple':
+                    additionalCost += 30;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        // Şurup seçimi ve miktarı fiyat hesaplaması
+        if (props.syrupFlavor && props.syrupFlavor.toLowerCase() !== 'yok') { // Şurup seçili mi kontrol et
+            if (props.syrupAmount) { // Şurup miktarı kontrolü
+                switch (props.syrupAmount.toLowerCase()) {
+                    case 'tek':
+                        additionalCost += 10;
+                        break;
+                    case 'double':
+                        additionalCost += 20;
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+
+        // Süt tipi fiyat hesaplaması
+        if (props.milkType && props.milkType.toLowerCase() === 'laktozsuz') {
+            additionalCost += 10;
+        }
+    }
+
+    const totalProductPrice = parseFloat(props.productPrice) + additionalCost;
+
     const orderData = {
         orderID: datenow,
         productID: props.productID,
         productName: props.productName,
-        productPrice: props.productPrice,
+        productPrice: totalProductPrice.toFixed(2), // Ek maliyetler dahil toplam fiyat
         quantity: props.quantity,
         lastEditDate: formatDate()
     };
@@ -206,19 +250,91 @@ export async function addOrder(props) {
         orderData.milkType = props.milkType || "Normal";
     }
 
-    // Veritabanına siparişi kaydet
-    await set(ref(db, 'Cafe/Tables/' + props.tableName + '/' + datenow), orderData);
+    try {
+        // Veritabanına siparişi kaydet
+        await set(ref(db, 'Cafe/Tables/' + props.tableName + '/' + datenow), orderData);
 
-    // Barista bölümüne de siparişi kaydet
-    await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + datenow), orderData);
+        // Barista bölümüne de siparişi kaydet
+        await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + datenow), orderData);
+        console.log(`Sipariş eklendi: Masa - ${props.tableName}, Sipariş ID - ${datenow}`);
+    } catch (error) {
+        console.error("Sipariş ekleme işlemi sırasında bir hata oluştu:", error);
+    }
 }
 
 export async function editOrders(props) {
-    await set(ref(db, 'Cafe/Categories/' + props.categoryName + '/'), {
-        categoryName: props.categoryName,
-        categoryBanner: props.categoryBanner,
-        lastEditDate: formatDate()
-    });
+    // Gerekli parametrelerin kontrolü
+    if (!props.tableName || !props.orderID || !props.productID || !props.productName) {
+        console.error("editOrders işlemi için geçersiz parametreler:", props);
+        return;
+    }
+
+    // Ürün kategorisini ve başlangıç fiyatını alın
+    const productData = await getProductData(props.productID); // Ürün verilerini al
+
+    if (!productData) {
+        console.error(`Ürün bilgisi alınamadı: ${props.productID}`);
+        return; // Eğer ürün bilgisi alınamazsa, işlemi sonlandır
+    }
+
+    // Ürün kategorisini ve fiyatını product tablosundan al
+    const productCategory = productData.productCategory;
+    let basePrice = parseFloat(productData.productPrice); // Başlangıç fiyatı alın
+
+    console.log("Başlangıç Fiyatı: ", basePrice);
+    console.log("Ürün Kategorisi: ", productCategory);
+
+    // Eğer ürün kahve kategorisindeyse, fiyatlandırmayı yap
+    if (productCategory && productCategory.includes('Kahve')) {
+        // Ekstra Shot fiyatlandırması
+        if (props.extraShot && props.extraShot.toLowerCase() !== "yok") {
+            if (props.extraShot.toLowerCase() === "tek") {
+                basePrice += 10;  // Tek shot eklenmişse 10 ekle
+            } else if (props.extraShot.toLowerCase() === "double") {
+                basePrice += 20;  // Double shot eklenmişse 20 ekle
+            } else if (props.extraShot.toLowerCase() === "triple") {
+                basePrice += 30;  // Triple shot eklenmişse 30 ekle
+            }
+        }
+
+        // Şurup fiyatlandırması
+        if (props.syrupFlavor && props.syrupFlavor.toLowerCase() !== "yok") {
+            if (props.syrupAmount.toLowerCase() === "tek") {
+                basePrice += 10; // Tek şurup eklenmişse 10 ekle
+            } else if (props.syrupAmount.toLowerCase() === "double") {
+                basePrice += 20; // Double şurup eklenmişse 20 ekle
+            }
+        }
+
+        // Süt tipi fiyatlandırması
+        if (props.milkType && props.milkType.toLowerCase() === "laktozsuz") {
+            basePrice += 10; // Laktozsuz süt eklenmişse 10 ekle
+        }
+    }
+
+    console.log("Güncellenmiş Fiyat: ", basePrice);
+
+    // Sipariş verisi oluşturma
+    const orderData = {
+        orderID: props.orderID,
+        productID: props.productID,
+        productName: props.productName,
+        productPrice: basePrice.toFixed(2), // Güncellenmiş fiyatı kullanın
+        quantity: props.quantity,
+        lastEditDate: formatDate(),
+        extraShot: props.extraShot || "Yok",
+        syrupFlavor: props.syrupFlavor || "Yok",
+        syrupAmount: props.syrupAmount || "Tek",
+        milkType: props.milkType || "Normal"
+    };
+
+    try {
+        // Siparişi veritabanında güncelle
+        await set(ref(db, 'Cafe/Tables/' + props.tableName + '/' + props.orderID), orderData);
+        console.log(`Sipariş güncellendi: Masa - ${props.tableName}, Sipariş - ${props.orderID}`);
+    } catch (error) {
+        console.error("editOrders işlemi sırasında bir hata oluştu:", error);
+    }
 }
 
 export async function delOrders(props) {
@@ -330,7 +446,6 @@ export async function tempPay(tableName, props) {
     }
 }
 
-
 export async function editTempPay(tableName, orderID, quantityChange) {
     if (!tableName || !orderID || typeof quantityChange !== 'number') {
         console.error("editTempPay işlemi için geçersiz parametreler:", { tableName, orderID, quantityChange });
@@ -339,7 +454,7 @@ export async function editTempPay(tableName, orderID, quantityChange) {
 
     try {
         const tempRef = ref(db, `Cafe/Temp/${tableName}/${orderID}`);
-        
+
         // Mevcut kaydı kontrol et
         const snapshot = await get(tempRef);
 
@@ -366,25 +481,35 @@ export async function editTempPay(tableName, orderID, quantityChange) {
     }
 }
 
-export async function delTempPay(props) {
-    await remove(ref(db, 'Cafe/Temp/' + props.orderID + '/'))
+export async function delTempPay(tableName, orderID) {
+    if (!tableName || !orderID) {
+        console.error("delTempPay işlemi için geçersiz parametreler:", { tableName, orderID });
+        return;
+    }
+
+    try {
+        await remove(ref(db, `Cafe/Temp/${tableName}/${orderID}`));
+        console.log(`Temp'ten silindi: Masa - ${tableName}, Sipariş - ${orderID}`);
+    } catch (error) {
+        console.error("Temp'ten silme işlemi sırasında bir hata oluştu:", error);
+    }
 }
 
 export async function getTempPay(tableName) {
     try {
-      const snapshot = await get(ref(db, `Cafe/Temp/${tableName}/`));
-      if (snapshot.exists()) {
-        console.log(`Temp verisi çekildi: Masa - ${tableName}`);
-        return snapshot.val(); // Masa adı altındaki tüm siparişleri döndür
-      } else {
-        console.log(`Temp verisi bulunamadı: Masa - ${tableName}`);
-        return {}; // Eğer veri yoksa boş bir nesne döndür
-      }
+        const snapshot = await get(ref(db, `Cafe/Temp/${tableName}/`));
+        if (snapshot.exists()) {
+            console.log(`Temp verisi çekildi: Masa - ${tableName}`);
+            return snapshot.val(); // Masa adı altındaki tüm siparişleri döndür
+        } else {
+            console.log(`Temp verisi bulunamadı: Masa - ${tableName}`);
+            return {}; // Eğer veri yoksa boş bir nesne döndür
+        }
     } catch (error) {
-      console.error("Temp verisi alınırken bir hata oluştu:", error);
-      return {}; // Hata durumunda da boş bir nesne döndür
+        console.error("Temp verisi alınırken bir hata oluştu:", error);
+        return {}; // Hata durumunda da boş bir nesne döndür
     }
-  }
+}
 
 export async function getBaristaOrders() {
     var returnValue = 0
@@ -621,7 +746,7 @@ export const updateCategoryOrder = async (categories) => {
         console.error('Kategori sıralaması güncellenirken hata oluştu:', error);
     }
 };
-  
+
 
 // Firebase'de ürün sıralamasını güncelleyen fonksiyon
 export const updateProductOrder = async (categoryId, products) => {
@@ -637,39 +762,81 @@ export async function updateOrderQuantity({ tableName, orderID, quantity }) {
 
 export async function addBackToOrders({ tableName, order }) {
     const {
-      orderID,
-      productID,
-      productName,
-      productPrice,
-      quantity,
-      extraShot,
-      syrupFlavor,
-      syrupAmount,
-      milkType
-    } = order;
-  
-    // Eksik veya undefined alanları kontrol et ve varsayılan değerler ata
-    if (!orderID || !productID || !productName || !productPrice || !quantity) {
-      console.error("Eksik veya geçersiz sipariş bilgileri:", order);
-      return; // İşlemi durdur
-    }
-  
-    try {
-      await set(ref(db, `Cafe/Tables/${tableName}/${orderID}`), {
         orderID,
         productID,
         productName,
         productPrice,
         quantity,
-        extraShot: extraShot || 'yok', // Varsayılan değer
-        syrupFlavor: syrupFlavor || 'yok', // Varsayılan değer
-        syrupAmount: syrupAmount || 'yok', // Varsayılan değer
-        milkType: milkType || 'normal', // Varsayılan değer
-        lastEditDate: new Date().toLocaleString() // Son düzenleme tarihi
-      });
-      console.log(`Sipariş ${orderID} başarılı bir şekilde Orders tablosuna geri eklendi.`);
-    } catch (error) {
-      console.error("Orders tablosuna sipariş geri eklenemedi:", error);
+        extraShot,
+        syrupFlavor,
+        syrupAmount,
+        milkType
+    } = order;
+
+    // Eksik veya undefined alanları kontrol et ve varsayılan değerler ata
+    if (!orderID || !productID || !productName || !productPrice || !quantity) {
+        console.error("Eksik veya geçersiz sipariş bilgileri:", order);
+        return; // İşlemi durdur
     }
-  }
-  
+
+    try {
+        await set(ref(db, `Cafe/Tables/${tableName}/${orderID}`), {
+            orderID,
+            productID,
+            productName,
+            productPrice,
+            quantity,
+            extraShot: extraShot || 'yok', // Varsayılan değer
+            syrupFlavor: syrupFlavor || 'yok', // Varsayılan değer
+            syrupAmount: syrupAmount || 'yok', // Varsayılan değer
+            milkType: milkType || 'normal', // Varsayılan değer
+            lastEditDate: new Date().toLocaleString() // Son düzenleme tarihi
+        });
+        console.log(`Sipariş ${orderID} başarılı bir şekilde Orders tablosuna geri eklendi.`);
+    } catch (error) {
+        console.error("Orders tablosuna sipariş geri eklenemedi:", error);
+    }
+}
+
+export async function getProductCategory(productID) {
+    if (!productID) {
+        console.error("Geçersiz productID:", productID);
+        return null;
+    }
+
+    try {
+        const productRef = ref(db, `Cafe/Products/${productID}`);
+        const snapshot = await get(productRef);
+
+        if (snapshot.exists()) {
+            const productData = snapshot.val();
+            const category = productData.productCategory; // Güncellenmiş alan adı
+
+            if (category) {
+                return category; // Kategori bilgisi dön
+            } else {
+                console.warn(`Kategori bilgisi bulunamadı: ${productID}`);
+                return null;
+            }
+        } else {
+            console.warn(`Ürün bulunamadı: ${productID}`);
+            return null; // Ürün bulunamadıysa null dön
+        }
+    } catch (error) {
+        console.error("Ürün kategorisi alınırken hata oluştu:", error);
+        return null;
+    }
+}
+
+export async function getProductData(productID) {
+    // Tüm ürünleri getProducts ile çek
+    const allProducts = await getProducts();
+
+    if (!allProducts || !allProducts[productID]) {
+        console.error("Ürün bilgisi bulunamadı: " + productID);
+        return null; // Ürün bilgisi bulunamadıysa null döndür
+    }
+
+    // Ürün bilgilerini döndür
+    return allProducts[productID];
+}

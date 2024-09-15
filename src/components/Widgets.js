@@ -118,7 +118,7 @@ export const BaristaButton = (props) => {
 };
 
 export const TableButtonForPay = (props) => {
-  const { title, setSelectedTable, handleClick } = props;
+  const { title, setSelectedTable, handleClick, style } = props;
 
   const onClick = () => {
     setSelectedTable(title);
@@ -126,7 +126,7 @@ export const TableButtonForPay = (props) => {
   };
 
   return (
-    <Card onClick={onClick} style={{ cursor: "pointer", backgroundColor: "#eeeeee" }} border="dark" className="shadow-sm">
+    <Card onClick={onClick} style={style} border="dark" className="shadow-sm">
       <Card.Body>
         <Row className="d-flex align-items-center" style={{ height: "4rem" }}>
           <Col className="d-flex flex-column justify-content-center text-center">

@@ -92,8 +92,6 @@ const RouteWithSidebar = ({ component: Component }) => {
 
   return (
     <>
-      <Preloader show={!loaded} />
-      {loaded && (
         <>
           <Sidebar />
           <main className="content">
@@ -101,7 +99,6 @@ const RouteWithSidebar = ({ component: Component }) => {
             <Component />
           </main>
         </>
-      )}
     </>
   );
 };

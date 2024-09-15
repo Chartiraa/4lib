@@ -37,6 +37,7 @@
     "chartist": "^0.11.4",
     "chartist-plugin-tooltips-updated": "^0.1.4",
     "firebase": "^10.12.4",
+    "html5-qrcode": "^2.3.8",
     "moment-timezone": "^0.5.31",
     "primeicons": "^7.0.0",
     "primereact": "^10.7.0",
