@@ -12,6 +12,7 @@ import Barista from "./Barista";
 import Products from "./Menu1/Products";
 import Products2 from "./Menu2/Products";
 import Products3 from "./Menu3/Products";
+import ShoppingCart from "./Menu3/ShoppingCart";
 
 import DashboardOverview from "./dashboard/DashboardOverview";
 import TakeOrder from './TakeOrder';
@@ -133,6 +134,7 @@ export default function App() {
       <Route path={Routes.Products.path} element={<ProtectedRoute><RouteWithLoader component={Products} /></ProtectedRoute>} />
       <Route path={Routes.Products2.path} element={<ProtectedRoute><RouteWithLoader component={Products2} /></ProtectedRoute>} />
       <Route path={Routes.Products3.path} element={<RouteWithLoader component={Products3} />} />
+      <Route path={Routes.ShoppingCart.path} element={<RouteWithLoader component={ShoppingCart} />} />
 
 
 

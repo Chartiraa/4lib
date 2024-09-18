@@ -13,6 +13,7 @@ export const Routes = {
     Products: { path: "/menu1/products/:categoryName" },
     Products2: { path: "/menu2/products/:categoryName" },
     Products3: { path: "/menu/products/:categoryName" },
+    ShoppingCart: { path: "/menu/shoppingcart" },
     BootstrapTables: { path: "/tables/bootstrap-tables" },
     Billing: { path: "/examples/billing" },
     Invoice: { path: "/examples/invoice" },
