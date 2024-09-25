@@ -40,6 +40,7 @@
     "js-cookie": "^3.0.5",
     "moment-timezone": "^0.5.31",
     "primereact": "^10.7.0",
+    "qrcode": "^1.5.4",
     "react": "^16.13.1",
     "react-chartist": "^0.14.4",
     "react-copy-to-clipboard": "^5.0.3",

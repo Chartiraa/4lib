@@ -67,6 +67,7 @@ export default () => {
             productID: selectedProduct.productID,
             productName: selectedProduct.productName,
             productPrice: selectedProduct.productPrice,
+            productCategory: selectedProduct.productCategory,
             quantity: quantity,
             ...customizations // Özelleştirmeleri ekle
         };
@@ -93,7 +94,7 @@ export default () => {
 
     return (
         <>
-            <div style={{ backgroundColor: 'white', height: '100vh' }}>
+            <div style={{ backgroundColor: 'white', height: '100%', minHeight: '100vh' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0rem 2rem 1rem 2rem' }}>
                     <img src="https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f" alt="Leras Logo" style={{ width: '100%', maxWidth: '100px' }} />
                     <FontAwesomeIcon icon={faCartPlus} style={{ fontSize: '1.5rem', color: '#3C2F2F' }} onClick={() => navigate(`/menu/shoppingcart`)} />
@@ -118,7 +119,7 @@ export default () => {
             {/* Ürün Özelleştirme ve Sepete Ekleme Modali */}
             <Modal show={showProductModal} onHide={handleCloseModal} centered>
                 <Modal.Header closeButton>
-                    <Modal.Title className="w-100 text-center">{selectedProduct?.productName} Özelleştirmeleri</Modal.Title>
+                    <Modal.Title className="w-100 text-center">{selectedProduct?.productName}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="d-flex flex-column align-items-center justify-content-center">
                     {/* Özelleştirme Seçenekleri */}
