@@ -27,6 +27,12 @@ function formatDateOnly() {
     return `${day}-${month}-${year}`;
 }
 
+const parseDate = (dateString) => {
+    const [datePart, timePart] = dateString.split(' - ');
+    const [day, month, year] = datePart.split('-');
+    return new Date(`${year}-${month}-${day}T${timePart}`);
+};
+
 export async function uploadImage(file, ID) {
     const storageRef = sRef(storage, `images/${ID}`);
     const snapshot = await uploadBytes(storageRef, file);
@@ -188,6 +194,7 @@ export async function getOrders(tableName) {
 export async function addOrder(props) {
     const datenow = Date.now();
     const isCoffeeCategory = props.productCategory && props.productCategory.includes('Kahve'); // Ürün kategorisi kontrolü
+    const isTurkishCoffee = props.productName && props.productName.toLowerCase().includes('türk kahvesi'); // Türk kahvesi kontrolü
 
     // Ekstra özelliklere göre fiyat hesaplama
     let additionalCost = 0;
@@ -248,6 +255,10 @@ export async function addOrder(props) {
         orderData.syrupFlavor = props.syrupFlavor || "Yok";
         orderData.syrupAmount = props.syrupAmount || "Tek"; // Şurup miktarı: Varsayılan olarak "Tek"
         orderData.milkType = props.milkType || "Normal";
+    }
+
+    if (isTurkishCoffee) {
+        orderData.sugar = props.sugar || "Sade";
     }
 
     try {
@@ -512,18 +523,19 @@ export async function getTempPay(tableName) {
 }
 
 export async function getBaristaOrders() {
-    var returnValue = 0
-    await get(child(ref(db), "Cafe/Barista/")).then((snapshot) => {
-        if (snapshot.exists()) {
-            returnValue = snapshot.val()
-            return returnValue
-        }
-    }).catch((error) => {
-        console.error(error);
-    });
-
-    return returnValue
-}
+    let returnValue = {};
+  
+    try {
+      const snapshot = await get(child(ref(db), "Cafe/Barista/"));
+      if (snapshot.exists()) {
+        returnValue = snapshot.val();
+      }
+    } catch (error) {
+      console.error("Error fetching barista orders:", error);
+    }
+  
+    return returnValue;
+  }
 
 export async function addBaristaOrder(props) {
     await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + Date.now()), {
@@ -646,22 +658,32 @@ export async function getEmptyTables() {
 export async function getOccupiedTables() {
     const dbRef = ref(db);
     try {
-        const ordersSnapshot = await get(child(dbRef, 'Cafe/Tables'));
+        // Cafe/Tables verisini al
+        const tablesSnapshot = await get(child(dbRef, 'Cafe/Tables'));
+        let occupiedTables = [];
 
-        if (ordersSnapshot.exists()) {
-            const orders = ordersSnapshot.val();
-            const occupiedTables = Object.keys(orders); // Dolu masaların listesi
-
-            return occupiedTables; // Dolu masaların listesini döndür
-        } else {
-            console.log('Cafe/Tables tablosu bulunamadı.');
-            return [];
+        if (tablesSnapshot.exists()) {
+            const tables = tablesSnapshot.val();
+            occupiedTables = Object.keys(tables); // Dolu masaların listesi
         }
+
+        // Cafe/Temp verisini al
+        const tempSnapshot = await get(child(dbRef, 'Cafe/Temp'));
+        if (tempSnapshot.exists()) {
+            const tempTables = tempSnapshot.val();
+            const tempOccupiedTables = Object.keys(tempTables); // Temp'teki dolu masalar
+
+            // İki listeyi birleştir ve tekrar eden masaları filtrele
+            occupiedTables = [...new Set([...occupiedTables, ...tempOccupiedTables])];
+        }
+
+        return occupiedTables; // Tüm dolu masaların birleşik listesini döndür
     } catch (error) {
         console.error('Dolu masalar bulunurken bir hata oluştu:', error);
         return [];
     }
 }
+
 
 /**
  * Firebase'de bir masa numarasını değiştirir.

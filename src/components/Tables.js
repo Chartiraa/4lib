@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons';
-import { Col, Row, Card, Image, Button, Table, Modal, ProgressBar, Form } from '@themesberg/react-bootstrap';
+import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward, faMinus, faPlus, faSort } from '@fortawesome/free-solid-svg-icons';
+import { Col, Row, Card, Image, Button, Table, Modal, ProgressBar, Form, Pagination, InputGroup } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
 
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
@@ -325,10 +325,12 @@ export const AccountsTable = () => {
 export const TablesTable = () => {
 
   const [tables, setTables] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [tablesPerPage] = useState(10); // Her sayfada 10 masa gösterilecek
 
   useEffect(() => {
     getTables().then(res => {
-      setTables(res)
+      setTables(res);
     });
   }, []);
 
@@ -336,6 +338,14 @@ export const TablesTable = () => {
     delTable(tableName);
     getTables().then(res => setTables(res));
   };
+
+  // Pagination için mevcut sayfadaki masaları alma
+  const indexOfLastTable = currentPage * tablesPerPage;
+  const indexOfFirstTable = indexOfLastTable - tablesPerPage;
+  const currentTables = Object.values(tables).slice(indexOfFirstTable, indexOfLastTable);
+
+  // Toplam sayfa sayısını hesapla
+  const totalPages = Math.ceil(Object.keys(tables).length / tablesPerPage);
 
   const TableRow = (props) => {
     const { tableName, lastEditDate } = props;
@@ -373,18 +383,31 @@ export const TablesTable = () => {
             </tr>
           </thead>
           <tbody>
-            {Object.keys(tables).map(key => <TableRow key={`${tables[key].tableName}`} {...tables[key]} />)}
+            {currentTables.map((table, index) => (
+              <TableRow key={index} {...table} />
+            ))}
           </tbody>
         </Table>
+        
+        {/* Pagination */}
+        <Pagination>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+              {i + 1}
+            </Pagination.Item>
+          ))}
+        </Pagination>
       </Card.Body>
     </Card>
   );
 };
-
 export const ProductsTable = ({ refresh }) => {
-
   const [products, setProducts] = useState({});
   const [categories, setCategories] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [productsPerPage] = useState(10); // Her sayfada 10 ürün gösterilecek
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [searchTerm, setSearchTerm] = useState(''); // Arama için state
 
   useEffect(() => {
     getProducts().then(res => setProducts(res));
@@ -479,6 +502,54 @@ export const ProductsTable = ({ refresh }) => {
     });
   };
 
+  // Sıralama işlevi
+  const requestSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedProducts = Object.values(products).sort((a, b) => {
+    if (sortConfig.key) {
+      let keyA = a[sortConfig.key];
+      let keyB = b[sortConfig.key];
+
+      // Fiyat sıralaması için sayısal olarak karşılaştırma
+      if (sortConfig.key === 'productPrice') {
+        keyA = parseFloat(keyA);
+        keyB = parseFloat(keyB);
+      } else {
+        keyA = keyA ? keyA.toString().toLowerCase() : '';
+        keyB = keyB ? keyB.toString().toLowerCase() : '';
+      }
+
+      if (keyA < keyB) {
+        return sortConfig.direction === 'asc' ? -1 : 1;
+      }
+      if (keyA > keyB) {
+        return sortConfig.direction === 'asc' ? 1 : -1;
+      }
+      return 0;
+    }
+    return 0;
+  });
+
+  // Arama işlemi
+  const filteredProducts = sortedProducts.filter((product) =>
+    product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.productCategory.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Pagination için mevcut sayfadaki ürünleri alma
+  const indexOfLastProduct = currentPage * productsPerPage;
+  const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+  const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+
+  // Toplam sayfa sayısını hesapla
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
   const TableRow = (props) => {
     const { productID, productName, productCategory, productPrice, productImage, lastEditDate } = props;
 
@@ -532,58 +603,69 @@ export const ProductsTable = ({ refresh }) => {
   return (
     <Card border="light" className="table-wrapper table-responsive shadow-sm" style={{ border: 0 }}>
       <Card.Body className="pt-0">
+        {/* Arama Çubuğu */}
+        <InputGroup className="mb-3">
+          <Form.Control
+            placeholder="Ürün adı veya kategori ara..."
+            aria-label="Ürün adı veya kategori ara"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </InputGroup>
+
         <Table hover className="user-table align-items-center">
           <thead>
             <tr>
-              <th className="border-bottom">Ürün Adı</th>
-              <th className="border-bottom">Ürün Kategorisi</th>
-              <th className="border-bottom">Fiyat</th>
+              <th className="border-bottom" onClick={() => requestSort('productName')}>
+                Ürün Adı <FontAwesomeIcon icon={faSort} />
+              </th>
+              <th className="border-bottom" onClick={() => requestSort('productCategory')}>
+                Ürün Kategorisi <FontAwesomeIcon icon={faSort} />
+              </th>
+              <th className="border-bottom" onClick={() => requestSort('productPrice')}>
+                Fiyat <FontAwesomeIcon icon={faSort} />
+              </th>
               <th className="border-bottom">Ürün Görseli</th>
-              <th className="border-bottom">Düzenleme Tarihi</th>
+              <th className="border-bottom" onClick={() => requestSort('lastEditDate')}>
+                Düzenleme Tarihi <FontAwesomeIcon icon={faSort} />
+              </th>
               <th className="border-bottom">Eylem</th>
             </tr>
           </thead>
           <tbody>
-            {Object.keys(products).map(key => <TableRow key={`${products[key].productID}`} {...products[key]} />)}
+            {currentProducts.map((product, index) => (
+              <TableRow key={product.productID} {...product} />
+            ))}
           </tbody>
         </Table>
+
+        {/* Pagination */}
+        <Pagination>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+              {i + 1}
+            </Pagination.Item>
+          ))}
+        </Pagination>
       </Card.Body>
     </Card>
   );
 };
 
-export const CategoriesTable = (refresh) => {
+export const CategoriesTable = ({ refresh }) => {
 
   const [categories, setCategories] = useState({});
-
-  const categoryOrder = [
-    "Sıcak Kahveler",
-    "Soğuk Kahveler",
-    "Cold Chocolate",
-    "Doyurucu Sıcaklar",
-    "Soğuk Çaylar",
-    "Geleneksel",
-    "Diğer Soğuk İçecekler",
-    "Bitki Çayları",
-    "Limonatalar",
-    "Milkshake",
-    "Bubble Tea",
-    "Frozen",
-    "Soft İçecekler",
-  ];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [categoriesPerPage] = useState(10); // Her sayfada 10 kategori gösterilecek
 
   useEffect(() => {
     getCategories().then((res) => {
       const categoriesArray = Object.values(res);
-      // Kategorileri belirtilen sıraya göre sıralama
-      const sortedCategories = categoriesArray.sort(
-        (a, b) =>
-          categoryOrder.indexOf(a.categoryName) - categoryOrder.indexOf(b.categoryName)
-      );
+      // Kategorileri sortOrder değerine göre sıralama
+      const sortedCategories = categoriesArray.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
       setCategories(sortedCategories);
     });
   }, [refresh]);
-
 
   const delCategoryHandler = (categoryName) => {
     delCategory(categoryName);
@@ -621,7 +703,6 @@ export const CategoriesTable = (refresh) => {
       },
     }).then((result) => {
       if (result.isConfirmed) {
-        console.log(result.value);
         if (result.value.fileUpload == undefined) {
           editCategory({ categoryName: result.value.inputText1, categoryBanner: category.categoryBanner });
           getCategories().then(res => setCategories(res));
@@ -633,16 +714,23 @@ export const CategoriesTable = (refresh) => {
                 icon: "success",
                 title: "Kategori bilgileri düzenlendi.",
                 showConfirmButton: false,
-                showConfirmButton: false,
                 timer: 1000
-              })
-            })
-          })
+              });
+            });
+          });
           getCategories().then(res => setCategories(res));
         }
       }
     });
   };
+
+  // Pagination için mevcut sayfadaki kategorileri alma
+  const indexOfLastCategory = currentPage * categoriesPerPage;
+  const indexOfFirstCategory = indexOfLastCategory - categoriesPerPage;
+  const currentCategories = Object.values(categories).slice(indexOfFirstCategory, indexOfLastCategory);
+
+  // Toplam sayfa sayısını hesapla
+  const totalPages = Math.ceil(Object.keys(categories).length / categoriesPerPage);
 
   const TableRow = (props) => {
     const { categoryName, lastEditDate } = props;
@@ -683,9 +771,20 @@ export const CategoriesTable = (refresh) => {
             </tr>
           </thead>
           <tbody>
-            {Object.keys(categories).map(key => <TableRow key={`${categories[key].categoryName}`} {...categories[key]} />)}
+            {currentCategories.map((category, index) => (
+              <TableRow key={index} {...category} />
+            ))}
           </tbody>
         </Table>
+
+        {/* Pagination */}
+        <Pagination>
+          {Array.from({ length: totalPages }, (_, i) => (
+            <Pagination.Item key={i + 1} active={i + 1 === currentPage} onClick={() => setCurrentPage(i + 1)}>
+              {i + 1}
+            </Pagination.Item>
+          ))}
+        </Pagination>
       </Card.Body>
     </Card>
   );

@@ -20,7 +20,7 @@ export default () => {
     getOccupiedTables().then(res => {
       setOccupiedTables(res);
     });
-  }, []);
+  }, [refresh]);
 
   const handleClick = () => {
     setRefresh(refresh + 1);

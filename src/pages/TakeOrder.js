@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { getProducts, getCategories, addOrder, getEmptyTables, changeTableNumber } from "../data/DBFunctions";
 import { CategoryButton, ProductButton } from "../components/Widgets";
 import { Orders } from "../components/Tables";
+import QR from "../components/QR";
 
 export default () => {
     const { tableName } = useParams();
@@ -16,17 +17,28 @@ export default () => {
     const [visible, setVisible] = useState(false);
     const [products, setProducts] = useState({});
     const [categories, setCategories] = useState({});
-    const [selectedCategory, setSelectedCategory] = useState('Soğuk Kahveler');
+    const [selectedCategory, setSelectedCategory] = useState('Sıcak Kahveler');
     const [refresh, setRefresh] = useState(0);
     const [isXLargeScreen, setIsXLargeScreen] = useState(window.innerWidth >= 1200);
     const [emptyTables, setEmptyTables] = useState([]);
     const [showOptionsModal, setShowOptionsModal] = useState(false);
+    const [showLatteModal, setShowLatteModal] = useState(false);
+    const [showMochaModal, setShowMochaModal] = useState(false);
+    const [showMacchiatoModal, setShowMacchiatoModal] = useState(false);
+    const [showQR, setShowQR] = useState(false);
+    const [showCustomerOrder, setShowCustomerOrder] = useState(false);
+    const [customerOrder, setCustomerOrder] = useState([]);
+    const [latteOptions, setLatteOptions] = useState([]);
+    const [mochaOptions, setMochaOptions] = useState([]);
+    const [macchiatoOptions, setMacchiatoOptions] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [extraShot, setExtraShot] = useState('Yok'); // Varsayılan: Yok
-    const [syrupFlavor, setSyrupFlavor] = useState('Yok'); // Varsayılan: Yok
-    const [syrupAmount, setSyrupAmount] = useState('Tek'); // Varsayılan: Tek
-    const [milkType, setMilkType] = useState('Normal'); // Varsayılan: Normal
-    const [quantity, setQuantity] = useState(1); // Varsayılan: 1
+    const [extraShot, setExtraShot] = useState('Yok');
+    const [syrupFlavor, setSyrupFlavor] = useState('Yok');
+    const [syrupAmount, setSyrupAmount] = useState('Tek');
+    const [milkType, setMilkType] = useState('Normal');
+    const [quantity, setQuantity] = useState(1);
+    const [kahveSecimi, setKahveSecimi] = useState('Sade');
+    const [turkKahvesiModalVisible, setTurkKahvesiModalVisible] = useState(false);
 
     // Seçili kategoriye göre ürünleri filtreleyin ve sıralayın
     const filteredProducts = selectedCategory ? Object.values(products)
@@ -55,13 +67,58 @@ export default () => {
     }, []);
 
     const handleProductClick = (product) => {
-        setSelectedProduct(product); // Seçili ürünü ayarla
-        setQuantity(1); // Varsayılan miktarı sıfırla
-        setExtraShot('Yok'); // Ekstra seçenekleri sıfırla
+        setSelectedProduct(product);
+        setQuantity(1);
+        setExtraShot('Yok');
         setSyrupFlavor('Yok');
         setSyrupAmount('Tek');
         setMilkType('Normal');
-        setShowOptionsModal(true); // Modalı göster
+        if (product.productName.includes("Türk Kahvesi")) {
+            setKahveSecimi('Sade');
+            setTurkKahvesiModalVisible(true);
+        } else if (product.productName.includes("Latte") || product.productName.includes("Mocha") || product.productName.includes("Macchiato")) {
+            handleLatteMochaMacchiatoClick(product.productName);
+        } else {
+            setShowOptionsModal(true);
+        }
+    };
+
+    // Latte, Mocha ve Macchiato için modal açılması
+    const handleLatteMochaMacchiatoClick = (type) => {
+        const filteredOptions = Object.values(products).filter(p => p.productName.includes(type));
+        if (selectedCategory === 'Sıcak Kahveler') {
+            const hotOptions = filteredOptions.filter(p => !p.productName.includes("Ice"));
+            if (type.includes("Latte")) {
+                setLatteOptions(hotOptions);
+                setShowLatteModal(true);
+            } else if (type.includes("Mocha")) {
+                setMochaOptions(hotOptions);
+                setShowMochaModal(true);
+            } else if (type.includes("Macchiato")) {
+                setMacchiatoOptions(hotOptions);
+                setShowMacchiatoModal(true);
+            }
+        } else if (selectedCategory === 'Soğuk Kahveler') {
+            const iceOptions = filteredOptions.filter(p => p.productName.includes("Ice"));
+            if (type.includes("Latte")) {
+                setLatteOptions(iceOptions);
+                setShowLatteModal(true);
+            } else if (type.includes("Mocha")) {
+                setMochaOptions(iceOptions);
+                setShowMochaModal(true);
+            } else if (type.includes("Macchiato")) {
+                setMacchiatoOptions(iceOptions);
+                setShowMacchiatoModal(true);
+            }
+        }
+    };
+
+    const handleProductSelect = (product) => {
+        setSelectedProduct(product);
+        setShowLatteModal(false);
+        setShowMochaModal(false);
+        setShowMacchiatoModal(false);
+        setShowOptionsModal(true);
     };
 
     const addOrderToTable = (product) => {
@@ -72,14 +129,22 @@ export default () => {
             quantity: quantity,
             tableName: decodedTableName,
             productCategory: product.productCategory,
+            sugar: kahveSecimi,
             extraShot: extraShot,
             syrupFlavor: syrupFlavor,
             syrupAmount: syrupAmount,
             milkType: milkType
         }).then(() => {
             setRefresh(refresh + 1);
+            setQuantity(1);
+            setExtraShot('Yok');
+            setSyrupFlavor('Yok');
+            setSyrupAmount('Tek');
+            setMilkType('Normal');
+            setKahveSecimi('Sade');
         });
         setShowOptionsModal(false);
+        setTurkKahvesiModalVisible(false);
     };
 
     const handleOrderWithOptions = () => {
@@ -90,15 +155,15 @@ export default () => {
 
     const moveTable = () => {
         getEmptyTables().then(tables => {
-            setEmptyTables(tables); // Boş masaları state'e kaydet
-            setVisible(true); // Dialog'u görünür yap
+            setEmptyTables(tables);
+            setVisible(true);
         });
     };
 
-    // Boş masalara tıklama işlevi
     const handleEmptyTableClick = (table) => {
         changeTableNumber(decodedTableName, table).then(() => {
             setRefresh(refresh + 1);
+            setVisible(false);
         })
     };
 
@@ -107,7 +172,7 @@ export default () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingInline: isXLargeScreen ? '2.5rem' : '1rem' }}>
                 <label className="text-center" style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{decodedTableName !== 'TakeAway' ? 'Masa - ' + decodedTableName : decodedTableName}</label>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <Button variant="outline-success" className="btn-icon-only btn-pill text-dark me-2" >
+                    <Button variant="outline-success" className="btn-icon-only btn-pill text-dark me-2" onClick={() => setShowQR(true)}>
                         <FontAwesomeIcon icon={faQrcode} style={{ fontSize: '1.5rem' }} />
                     </Button>
                     <Button variant="primary" style={{ backgroundColor: '#eeeeee', border: '1px solid #262B40', color: '#262B40' }} onClick={() => moveTable()}>Masa Taşı</Button>
@@ -118,20 +183,23 @@ export default () => {
                     <Orders refresh={refresh} setRefresh={setRefresh} tableName={decodedTableName} />
                 </Col>
                 <Col xs={12} xl={3}>
+                    {/* Kategoriler */}
                     {isXLargeScreen ? (
-                        <Row>
-                            {Object.values(categories).map((category, index) => (
-                                <Col xs={6} xl={6} key={index}>
-                                    <CategoryButton
-                                        key={index}
-                                        title={category.categoryName}
-                                        onClick={() => setSelectedCategory(category.categoryName)}
-                                    />
-                                </Col>
-                            ))}
-                        </Row>
+                        <ScrollPanel style={{ width: '100%', height: isXLargeScreen ? '90vh' : '70vh' }}>
+                            <Row>
+                                {Object.values(categories).map((category, index) => (
+                                    <Col xs={6} xl={6} key={index}>
+                                        <CategoryButton
+                                            key={index}
+                                            title={category.categoryName}
+                                            onClick={() => setSelectedCategory(category.categoryName)}
+                                        />
+                                    </Col>
+                                ))}
+                            </Row>
+                        </ScrollPanel>
                     ) : (
-                        <Form.Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} aria-label="Kategori Seçin" style={{ marginBottom: '2rem', marginTop: '1rem' }} >
+                        <Form.Select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} aria-label="Kategori Seçin" style={{ marginBottom: '2rem', marginTop: '1rem' }}>
                             {Object.values(categories).map((category, index) => (
                                 <option key={index} value={category.categoryName}>
                                     {category.categoryName}
@@ -141,17 +209,170 @@ export default () => {
                     )}
                 </Col>
                 <Col xs={12} xl={4}>
+                    {/* Ürünler */}
                     <ScrollPanel style={{ width: '100%', height: isXLargeScreen ? '90vh' : '70vh' }}>
                         <Row>
-                            {filteredProducts.map((product, index) => (
-                                <Col xs={6} xl={6} key={index}>
-                                    <ProductButton title={product.productName} isXLargeScreen={isXLargeScreen} onClick={() => handleProductClick(product)} />
-                                </Col>
-                            ))}
+                            {/* Sadece Sıcak Kahveler ve Soğuk Kahveler kategorisinde Latte, Mocha ve Macchiato butonlarını göster */}
+                            {selectedCategory === 'Sıcak Kahveler' && (
+                                <>
+                                    <Col xs={6} xl={6} key={125}>
+                                        <ProductButton title={"Latte"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Latte")} />
+                                    </Col>
+                                    <Col xs={6} xl={6} key={498}>
+                                        <ProductButton title={"Mocha"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Mocha")} />
+                                    </Col>
+                                    <Col xs={6} xl={6} key={6296}>
+                                        <ProductButton title={"Macchiato"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Macchiato")} />
+                                    </Col>
+                                </>
+                            )}
+                            {selectedCategory === 'Soğuk Kahveler' && (
+                                <>
+                                    <Col xs={6} xl={6} key={125}>
+                                        <ProductButton title={"Ice Latte"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Latte")} />
+                                    </Col>
+                                    <Col xs={6} xl={6} key={498}>
+                                        <ProductButton title={"Ice Mocha"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Mocha")} />
+                                    </Col>
+                                    <Col xs={6} xl={6} key={6296}>
+                                        <ProductButton title={"Ice Macchiato"} isXLargeScreen={isXLargeScreen} onClick={() => handleLatteMochaMacchiatoClick("Macchiato")} />
+                                    </Col>
+                                </>
+                            )}
+                            {filteredProducts.map((product, index) => {
+                                if (product.productName.includes("Latte") || product.productName.includes("Mocha") || product.productName.includes("Macchiato")) {
+                                } else {
+                                    return (
+                                        <Col xs={6} xl={6} key={index}>
+                                            <ProductButton title={product.productName} isXLargeScreen={isXLargeScreen} onClick={() => handleProductClick(product)} />
+                                        </Col>
+                                    )
+                                }
+                            })}
                         </Row>
                     </ScrollPanel>
                 </Col>
             </Row>
+
+            {/* QR Code Modalı */}
+            <Modal show={showQR} onHide={() => setShowQR(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>QR Kodu Okutun</Modal.Title>
+                </Modal.Header>
+                <Modal.Body style={{ display: 'flex', justifyContent: 'center', alignItems: 'start' }}>
+                    <QR customerOrder={customerOrder} setCustomerOrder={setCustomerOrder} setShowQR={setShowQR} setShowCustomerOrder={setShowCustomerOrder} />
+                </Modal.Body>
+            </Modal>
+
+            {/* Müşteri Sipariş Modalı */}
+            <Modal show={showCustomerOrder} onHide={() => setShowCustomerOrder(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Masa {decodedTableName} Sipariş Onayı</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {customerOrder.map((item, index) => (
+                        <div key={index}>
+                            <strong>{item.productName}</strong> - {item.quantity} adet - {item.productPrice} TL
+                            {item.sugar && <div>Şeker: {item.sugar}</div>}
+                            {item.extraShot && <div>Ekstra Shot: Evet</div>}
+                            {item.syrupFlavor && <div>Şurup: {item.syrupFlavor} ({item.syrupAmount} pompa)</div>}
+                            {item.milkType && <div>Süt Türü: {item.milkType}</div>}
+                        </div>
+                    ))}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="primary" onClick={() => {
+                        // Burada siparişi onaylayıp sisteme gönderebilirsiniz
+                        console.log("Sipariş onaylandı:", customerOrder);
+                    }}>
+                        Onayla
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Latte Seçenekleri Modalı */}
+            <Modal show={showLatteModal} onHide={() => setShowLatteModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Latte Seçenekleri</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Row style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {latteOptions.map((option, index) => {
+                            if (option.productName != "Cold Chai Tea Latte") {
+                                return (
+                                    <Col xs={6} key={index}>
+                                        <Button variant="primary" style={{ width: '100%', margin: '0.5rem' }} onClick={() => handleProductSelect(option)}>{option.productName}</Button>
+                                    </Col>)
+                            }
+                        })}
+                    </Row>
+                </Modal.Body>
+            </Modal>
+
+            {/* Mocha Seçenekleri Modalı */}
+            <Modal show={showMochaModal} onHide={() => setShowMochaModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Mocha Seçenekleri</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Row style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {mochaOptions.map((option, index) => (
+                            <Col xs={6} key={index}>
+                                <Button variant="primary" style={{ width: '100%', margin: '0.5rem' }} onClick={() => handleProductSelect(option)}>{option.productName}</Button>
+                            </Col>
+                        ))}
+                    </Row>
+                </Modal.Body>
+            </Modal>
+
+            {/* Macchiato Seçenekleri Modalı */}
+            <Modal show={showMacchiatoModal} onHide={() => setShowMacchiatoModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Macchiato Seçenekleri</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Row style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {macchiatoOptions.map((option, index) => (
+                            <Col xs={6} key={index}>
+                                <Button variant="primary" style={{ width: '100%', margin: '0.5rem' }} onClick={() => handleProductSelect(option)}>{option.productName}</Button>
+                            </Col>
+                        ))}
+                    </Row>
+                </Modal.Body>
+            </Modal>
+
+            {/* Türk Kahvesi Modalı */}
+            <Modal show={turkKahvesiModalVisible} onHide={() => setTurkKahvesiModalVisible(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Türk Kahvesi Seçenekleri</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                        <Form.Label>Kahve Seçimi</Form.Label>
+                        <div className="d-flex justify-content-center">
+                            <Button variant={kahveSecimi === 'Sade' ? 'primary' : 'outline-primary'} onClick={() => setKahveSecimi('Sade')}>Sade</Button>
+                            <Button variant={kahveSecimi === 'Orta' ? 'primary' : 'outline-primary'} onClick={() => setKahveSecimi('Orta')} style={{ marginLeft: '10px' }}>Orta</Button>
+                            <Button variant={kahveSecimi === 'Şekerli' ? 'primary' : 'outline-primary'} onClick={() => setKahveSecimi('Şekerli')} style={{ marginLeft: '10px' }}>Şekerli</Button>
+                        </div>
+                    </Form.Group>
+
+                    {/* Miktar Ayarlama */}
+                    <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                        <Form.Label>Adet</Form.Label>
+                        <div className="d-flex align-items-center justify-content-center">
+                            <Button variant="outline-primary" onClick={() => setQuantity(prev => Math.max(1, prev - 1))}>-</Button>
+                            <span className="mx-3">{quantity}</span>
+                            <Button variant="outline-primary" onClick={() => setQuantity(prev => prev + 1)}>+</Button>
+                        </div>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer className="d-flex justify-content-center">
+                    <Button variant="secondary" onClick={() => setTurkKahvesiModalVisible(false)}>İptal</Button>
+                    <Button variant="primary" onClick={handleOrderWithOptions}>Sipariş Ver</Button>
+                </Modal.Footer>
+            </Modal>
+
+            {/* Özelleştirme Modalı */}
             <Modal show={showOptionsModal} onHide={() => setShowOptionsModal(false)} centered>
                 <Modal.Header closeButton>
                     <Modal.Title>Seçenekler</Modal.Title>
@@ -159,7 +380,6 @@ export default () => {
                 <Modal.Body>
                     {selectedProduct && selectedProduct.productCategory.includes('Kahve') && (
                         <>
-                            {/* Kahve için ekstra seçenekler */}
                             <Form.Group className="mb-3 d-flex flex-column align-items-center">
                                 <Form.Label>Ekstra Espresso Shot</Form.Label>
                                 <div className="d-flex justify-content-center">
@@ -219,7 +439,7 @@ export default () => {
                         </>
                     )}
 
-                    {/* Miktar Ayarlama Bölümü - Tüm Ürünler İçin */}
+                    {/* Miktar Ayarlama */}
                     <Form.Group className="mb-3 d-flex flex-column align-items-center">
                         <Form.Label>Adet</Form.Label>
                         <div className="d-flex align-items-center justify-content-center">
@@ -241,8 +461,8 @@ export default () => {
                 visible={visible}
                 style={{ width: '50vw' }}
                 onHide={() => setVisible(false)}
-                closable={true}  // Çarpı butonunu etkinleştir
-                dismissableMask={true}  // Maske alanına tıklayarak kapatmayı etkinleştir
+                closable={true}
+                dismissableMask={true}
             >
                 {emptyTables.length > 0 ? (
                     emptyTables.map((table, index) => (
