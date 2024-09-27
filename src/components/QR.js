@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 
 const QR = (props) => {
-
   const { customerOrder, setCustomerOrder, setShowQR, setShowCustomerOrder } = props;
-
 
   const [qrCode, setQrCode] = useState('Henüz bir QR kod taranmadı');
   const [cameras, setCameras] = useState([]); // Kameraları tutacak state
@@ -17,6 +15,10 @@ const QR = (props) => {
     // Cihazdaki kameraları listeleme
     const getCameras = async () => {
       try {
+        // Kamera izni isteme
+        await navigator.mediaDevices.getUserMedia({ video: true });
+
+        // Kameraları listeleme
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         setCameras(videoDevices);
@@ -53,7 +55,6 @@ const QR = (props) => {
           } catch (error) {
             console.error("Veri parse edilemedi:", error);
           }
-
         },
         (error) => {
           //console.error('QR Kod Okuma Hatası: ', error);
@@ -83,14 +84,15 @@ const QR = (props) => {
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'start', justifyContent: 'center' }}>
       <div id="reader" style={{ width: '100%', maxWidth: '400px' }}></div>
 
-      {/* Kamera Seçimi 
+      {/* Kamera Seçimi */}
       <select onChange={(e) => setSelectedCamera(e.target.value)} style={{ marginTop: '20px' }}>
+        {cameras.length === 0 && <option>Kamera bulunamadı</option>}
         {cameras.map((camera, index) => (
           <option key={index} value={camera.deviceId}>
             {camera.label || `Kamera ${index + 1}`}
           </option>
         ))}
-      </select>*/}
+      </select>
 
       <label style={{ marginTop: '20px', fontSize: '20px', textAlign: 'center' }}>
         {qrCode}
