@@ -524,18 +524,18 @@ export async function getTempPay(tableName) {
 
 export async function getBaristaOrders() {
     let returnValue = {};
-  
+
     try {
-      const snapshot = await get(child(ref(db), "Cafe/Barista/"));
-      if (snapshot.exists()) {
-        returnValue = snapshot.val();
-      }
+        const snapshot = await get(child(ref(db), "Cafe/Barista/"));
+        if (snapshot.exists()) {
+            returnValue = snapshot.val();
+        }
     } catch (error) {
-      console.error("Error fetching barista orders:", error);
+        console.error("Error fetching barista orders:", error);
     }
-  
+
     return returnValue;
-  }
+}
 
 export async function addBaristaOrder(props) {
     await set(ref(db, 'Cafe/Barista/' + props.tableName + '/' + Date.now()), {
@@ -559,6 +559,16 @@ export async function delBaristaOrders(tableName, orderID) {
     try {
         // Belirtilen referansta silme işlemini gerçekleştir
         await remove(ref(db, `Cafe/Barista/${tableName}/${orderID}`));
+    } catch (error) {
+        console.error('Silme işlemi sırasında hata oluştu:', error); // Hataları konsola yazdır
+        throw new Error('Sipariş silinirken bir hata oluştu.'); // Hata mesajı döndür
+    }
+}
+
+export async function delBaristaOrdersAll() {
+    try {
+        // Belirtilen referansta silme işlemini gerçekleştir
+        await remove(ref(db, `Cafe/Barista/`));
     } catch (error) {
         console.error('Silme işlemi sırasında hata oluştu:', error); // Hataları konsola yazdır
         throw new Error('Sipariş silinirken bir hata oluştu.'); // Hata mesajı döndür
