@@ -17,7 +17,7 @@ const CartPage = () => {
     useEffect(() => {
         const savedCart = Cookies.get('cart'); // Çerezden sepet verilerini alın
         if (savedCart) {
-            setCart(JSON.parse(savedCart)); // Çerezi JSON formatında parse edin ve state'e kaydedin
+            setCart(JSON.parse(savedCart))
         }
     }, []);
 
@@ -48,8 +48,8 @@ const CartPage = () => {
         return cart.map(item => {
             const compressedItem = {
                 id: item.productID,
-                n: item.productName,
-                p: item.productPrice,
+                //n: item.productName,
+                //p: item.productPrice,
                 c: item.productCategory,
                 q: item.quantity,
             };
@@ -71,6 +71,11 @@ const CartPage = () => {
                 compressedItem.m = item.milkType;
             }
 
+            if (item.sugar && item.sugar !== "Sade") {
+                compressedItem.s = item.sugar;
+            }
+
+            console.log(compressedItem)
             return compressedItem;
         });
     };
