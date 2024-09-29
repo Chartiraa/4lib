@@ -8,9 +8,11 @@ const QR = (props) => {
   const [cameras, setCameras] = useState([]); // Kameraları tutacak state
   const [selectedCamera, setSelectedCamera] = useState(null); // Seçilen kamera
   const [isScanning, setIsScanning] = useState(false); // Tarayıcı durumu
+  const [html5QrCode, setHtml5QrCode] = useState(null); // Html5Qrcode instance
 
   useEffect(() => {
-    const html5QrCode = new Html5Qrcode("reader");
+    const qrCodeInstance = new Html5Qrcode("reader");
+    setHtml5QrCode(qrCodeInstance);
 
     // Cihazdaki kameraları listeleme
     const getCameras = async () => {
@@ -22,8 +24,11 @@ const QR = (props) => {
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
         setCameras(videoDevices);
+
         if (videoDevices.length > 0) {
-          setSelectedCamera(videoDevices[0].deviceId); // Varsayılan olarak ilk kamerayı seç
+          // Arka kamerayı varsayılan olarak seç
+          const backCamera = videoDevices.find(camera => camera.label.toLowerCase().includes('Arka Kamera'));
+          setSelectedCamera(backCamera ? backCamera.deviceId : videoDevices[0].deviceId);
         }
       } catch (err) {
         console.error('Kamera listesi alınamadı:', err);
@@ -32,15 +37,32 @@ const QR = (props) => {
 
     getCameras(); // Kameraları yükle
 
-    // Seçilen kamerayı başlat
-    const startCamera = (deviceId) => {
-      if (isScanning) return; // Zaten tarama yapılıyorsa tekrar başlatma
+    // Temizlik işlemi (komponent unmount olduğunda kamerayı durdurur)
+    return () => {
+      if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+          html5QrCode.clear();
+          setIsScanning(false); // Tarama durumu kapandı
+        }).catch(err => console.error('Kamera durdurma hatası: ', err));
+      }
+    };
+  }, []);
+
+  // Seçilen kamerayı başlatma
+  useEffect(() => {
+    const startCamera = async (deviceId) => {
+      if (isScanning) {
+        await html5QrCode.stop();
+        setIsScanning(false);
+      }
+
       setIsScanning(true);
       html5QrCode.start(
         { deviceId }, // Kamera ID'si ile başlatıyoruz
         {
           fps: 10, // Saniyedeki tarama kare sayısı
           qrbox: { width: 250, height: 250 }, // QR kodu tarama alanı
+          aspectRatio: 1.3333, // Daha dengeli çözünürlük ayarları
         },
         (decodedText) => {
           // QR kod başarıyla okunduğunda
@@ -52,6 +74,7 @@ const QR = (props) => {
             setCustomerOrder(orderData);
             setShowQR(false);
             setShowCustomerOrder(true);
+            console.log('QR kod okundu:', orderData);
           } catch (error) {
             console.error("Veri parse edilemedi:", error);
           }
@@ -68,17 +91,7 @@ const QR = (props) => {
     if (selectedCamera) {
       startCamera(selectedCamera);
     }
-
-    // Temizlik işlemi (komponent unmount olduğunda kamerayı durdurur)
-    return () => {
-      if (isScanning) {
-        html5QrCode.stop().then(() => {
-          html5QrCode.clear();
-          setIsScanning(false); // Tarama durumu kapandı
-        }).catch(err => console.error('Kamera durdurma hatası: ', err));
-      }
-    };
-  }, [selectedCamera]); // Seçilen kamera değiştiğinde yeniden başlat
+  }, [selectedCamera, html5QrCode]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'start', justifyContent: 'center' }}>
