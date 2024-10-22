@@ -3,7 +3,7 @@ import { Col, Row, Button, Modal, Form } from '@themesberg/react-bootstrap';
 import { useParams } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartPlus } from "@fortawesome/free-solid-svg-icons";
+import { faShoppingCart } from "@fortawesome/free-solid-svg-icons";
 import Cookies from "js-cookie"; // Çerezleri kullanmak için js-cookie'yi import edin
 
 import { ProductButton } from "./MenuButton";
@@ -97,7 +97,7 @@ export default () => {
             <div style={{ backgroundColor: 'white', height: '100%', minHeight: '100vh' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0rem 2rem 1rem 2rem' }}>
                     <img src="https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f" alt="Leras Logo" style={{ width: '100%', maxWidth: '100px' }} />
-                    <FontAwesomeIcon icon={faCartPlus} style={{ fontSize: '1.5rem', color: '#3C2F2F' }} onClick={() => navigate(`/menu/shoppingcart`)} />
+                    <FontAwesomeIcon icon={faShoppingCart} style={{ fontSize: '1.5rem', color: '#3C2F2F' }} onClick={() => navigate(`/menu/shoppingcart`)} />
                 </div>
                 <div>
                     <p className="mb-3 text-center" style={{ color: "#3C2F2F", fontFamily: 'Montserrat, sans-serif', fontSize: '1.5rem', fontWeight: '800' }}>{decodedCategoryName}</p>
@@ -134,28 +134,6 @@ export default () => {
                                     <Button variant={customizations.extraShot === 'Double' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('extraShot', 'Double')} style={{ marginLeft: '10px' }}>Double</Button>
                                 </div>
                             </Form.Group>
-
-                            {/* Aroma Şurubu Seçenekleri */}
-                            <Form.Group className="mb-3 d-flex flex-column align-items-center">
-                                <Form.Label>Aroma Şurubu</Form.Label>
-                                <div className="d-flex justify-content-center">
-                                    <Button variant={customizations.syrupFlavor === 'Yok' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupFlavor', 'Yok')}>Yok</Button>
-                                    <Button variant={customizations.syrupFlavor === 'Vanilya' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupFlavor', 'Vanilya')} style={{ marginLeft: '10px' }}>Vanilya</Button>
-                                    <Button variant={customizations.syrupFlavor === 'Karamel' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupFlavor', 'Karamel')} style={{ marginLeft: '10px' }}>Karamel</Button>
-                                    <Button variant={customizations.syrupFlavor === 'Fındık' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupFlavor', 'Fındık')} style={{ marginLeft: '10px' }}>Fındık</Button>
-                                </div>
-                            </Form.Group>
-
-                            {/* Aroma Şurubu Miktarı Seçenekleri (Şurup varsa göster) */}
-                            {customizations.syrupFlavor !== 'Yok' && (
-                                <Form.Group className="mb-3 d-flex flex-column align-items-center">
-                                    <Form.Label>Aroma Şurubu Miktarı</Form.Label>
-                                    <div className="d-flex justify-content-center">
-                                        <Button variant={customizations.syrupAmount === 'Tek' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupAmount', 'Tek')}>Tek</Button>
-                                        <Button variant={customizations.syrupAmount === 'Double' ? 'primary' : 'outline-primary'} onClick={() => handleCustomizationChange('syrupAmount', 'Double')} style={{ marginLeft: '10px' }}>Double</Button>
-                                    </div>
-                                </Form.Group>
-                            )}
 
                             {/* Süt Tipi Seçenekleri */}
                             <Form.Group className="mb-3 d-flex flex-column align-items-center">

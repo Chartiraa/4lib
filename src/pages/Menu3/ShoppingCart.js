@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Table, Button, Card, Form, Modal } from '@themesberg/react-bootstrap';
 import Cookies from "js-cookie"; // Çerezleri yönetmek için js-cookie kütüphanesini kullanın
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTrashAlt, faEdit, faCartPlus, faQrcode } from "@fortawesome/free-solid-svg-icons";
+import { faTrashAlt, faEdit, faShoppingCart, faQrcode } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom"; // Yönlendirme için useNavigate import edin
 import QRCode from 'qrcode';
 
@@ -25,7 +25,7 @@ const CartPage = () => {
     const removeFromCart = (productID) => {
         const updatedCart = cart.filter(item => item.productID !== productID); // Ürün ID'sine göre sepeti filtreleyin
         setCart(updatedCart); // Güncellenmiş sepeti state'e kaydedin
-        Cookies.set('cart', JSON.stringify(updatedCart), { expires: 7 }); // Güncellenmiş sepeti çereze kaydedin
+        Cookies.set('cart', JSON.stringify(updatedCart)); // Güncellenmiş sepeti çereze kaydedin
     };
 
     // Düzenleme modalını açma işlevi
@@ -111,6 +111,9 @@ const CartPage = () => {
                 setQrCodes([url]); // Tek bir QR kod oluşturun
             });
         }
+
+        Cookies.set('cart', '');
+        setCart([]);
     };
 
     // Parçalara ayrılan verilerden birden fazla QR kod oluşturmak
@@ -168,7 +171,7 @@ const CartPage = () => {
             <div style={{ backgroundColor: 'white', height: '100%', minHeight: '100vh' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0rem 2rem 1rem 2rem' }}>
                     <img src="https://firebasestorage.googleapis.com/v0/b/lib-18147.appspot.com/o/images%2FLeras-logo.png?alt=media&token=57f65473-2f3a-45cb-b207-d00cb4ed574f" alt="Leras Logo" style={{ width: '100%', maxWidth: '100px' }} />
-                    <FontAwesomeIcon icon={faCartPlus} style={{ fontSize: '1.5rem', color: '#3C2F2F' }} onClick={() => navigate(`/menu/shoppingcart`)} />
+                    <FontAwesomeIcon icon={faShoppingCart} style={{ fontSize: '1.5rem', color: '#3C2F2F' }} onClick={() => navigate(`/menu/shoppingcart`)} />
                 </div>
                 <div className="content">
 
