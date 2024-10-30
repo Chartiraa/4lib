@@ -246,6 +246,7 @@ export async function addOrder(props) {
         productName: props.productName,
         productPrice: totalProductPrice.toFixed(2), // Ek maliyetler dahil toplam fiyat
         quantity: props.quantity,
+        paid: 0,
         lastEditDate: formatDate()
     };
 
@@ -336,7 +337,8 @@ export async function editOrders(props) {
         extraShot: props.extraShot || "Yok",
         syrupFlavor: props.syrupFlavor || "Yok",
         syrupAmount: props.syrupAmount || "Tek",
-        milkType: props.milkType || "Normal"
+        milkType: props.milkType || "Normal",
+        paid: 0
     };
 
     try {
@@ -352,7 +354,7 @@ export async function delOrders(props) {
     await remove(ref(db, 'Cafe/Tables/' + props.tableName + '/' + props.orderID))
 }
 
-export async function getTotal(tableName) {
+export async function getPaidAmount(tableName) {
     var returnValue = 0
     await get(child(ref(db), "Cafe/Totals/" + tableName)).then((snapshot) => {
         if (snapshot.exists()) {
@@ -366,15 +368,15 @@ export async function getTotal(tableName) {
     return returnValue
 }
 
-export async function setTotal(props) {
+export async function setPaidAmount(props) {
     await set(ref(db, 'Cafe/Totals/' + props.tableName + '/'), {
         tableName: props.tableName,
-        total: props.total,
+        paid: props.paid,
         lastEditDate: formatDate()
     });
 }
 
-export async function editTotal(props) {
+export async function editTotalAmount(props) {
     await set(ref(db, 'Cafe/Totals/' + props.tableName + '/'), {
         tableName: props.tableName,
         total: props.total,
@@ -718,31 +720,65 @@ export async function changeTableNumber(oldTableNumber, newTableNumber) {
 }
 
 function parseDateTime(dateTimeString) {
-    if (!dateTimeString) return null; // dateTimeString undefined ise, null döner
-    const [datePart, timePart] = dateTimeString.split(' - ');
-    const [day, month, year] = datePart.split('-');
-    const [hour, minute] = timePart.split(':');
+    if (!dateTimeString) return null;
 
-    return new Date(year, month - 1, day, hour, minute); // JavaScript'te aylar 0 bazlıdır (0 = Ocak)
+    // ISO formatındaki tarihleri doğrudan `Date` nesnesi olarak döndür
+    const parsedDate = new Date(dateTimeString);
+    if (!isNaN(parsedDate.getTime())) {
+        return parsedDate; // Geçerli bir tarihse döndür
+    }
+
+    // Geçerli değilse eski formata göre işle
+    const dateTimeParts = dateTimeString.split(' - ');
+    if (dateTimeParts.length !== 2) return null;
+
+    const [datePart, timePart] = dateTimeParts;
+    const dateSegments = datePart.split('-');
+    const timeSegments = timePart.split(':');
+
+    if (dateSegments.length !== 3 || timeSegments.length !== 2) return null;
+
+    const [day, month, year] = dateSegments;
+    const [hour, minute] = timeSegments;
+
+    // Sayısal değerlere dönüştür ve geçersiz tarihleri kontrol et
+    const legacyParsedDate = new Date(year, month - 1, day, hour, minute);
+    if (isNaN(legacyParsedDate.getTime())) return null;
+
+    return legacyParsedDate;
 }
 
+
+
 // Tarih aralığını kontrol eden ve logları getiren fonksiyon
+// Bu fonksiyon geçersiz tarihleri ele almak için güncellendi.
 export async function fetchLogsByDateRange(startDate, endDate) {
     const logsRef = ref(db, 'Cafe/Logs');
     const snapshot = await get(logsRef);
     const allLogs = snapshot.val();
 
-    // Eğer veri yoksa boş dizi döner
     if (!allLogs) {
         return [];
     }
 
-    // Tarihleri karşılaştırarak logları filtreler
+    const parseDate = (date) => {
+        const parsedDate = parseDateTime(date);
+        return parsedDate && !isNaN(parsedDate.getTime()) ? parsedDate : null;
+    };
+
+    const start = parseDate(startDate);
+    const end = parseDate(endDate);
+
+    // Başlangıç ve bitiş tarihleri geçerli değilse hata mesajı fırlat
+    if (!start || !end) {
+        console.error('Geçersiz başlangıç veya bitiş tarihi:', { startDate, endDate });
+        throw new Error('Geçersiz başlangıç veya bitiş tarihi');
+    }
+
     const filteredLogs = Object.keys(allLogs)
         .filter(dateTime => {
-            const logDate = parseDateTime(dateTime); // Log tarih formatını parse eder
-            if (!logDate) return false; // Eğer logDate geçerli değilse filtrelemeden çıkar
-            return logDate >= parseDateTime(startDate) && logDate <= parseDateTime(endDate);
+            const logDate = parseDate(dateTime);
+            return logDate && logDate >= start && logDate <= end;
         })
         .reduce((acc, dateTime) => {
             const logs = Object.entries(allLogs[dateTime]).map(([key, value]) => ({ ...value, date: dateTime }));
@@ -751,6 +787,8 @@ export async function fetchLogsByDateRange(startDate, endDate) {
 
     return filteredLogs;
 }
+
+
 
 export function getCurrentUserName() {
     const user = auth.currentUser; // auth.currentUser kullanarak giriş yapmış kullanıcıya erişim
@@ -769,7 +807,6 @@ export const updateCategoryOrder = async (categories) => {
     }
 };
 
-
 // Firebase'de ürün sıralamasını güncelleyen fonksiyon
 export const updateProductOrder = async (categoryId, products) => {
     products.forEach((product, index) => {
@@ -779,7 +816,7 @@ export const updateProductOrder = async (categoryId, products) => {
 };
 
 export async function updateOrderQuantity({ tableName, orderID, quantity }) {
-    await set(ref(db, `Cafe/Tables/${tableName}/${orderID}/quantity`), quantity);
+    await set(ref(db, `Cafe/Tables/${tableName}/${orderID}/paid`), quantity);
 }
 
 export async function addBackToOrders({ tableName, order }) {

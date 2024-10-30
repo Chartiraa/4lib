@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Pagination, Row, Col, Form } from '@themesberg/react-bootstrap';
-import { fetchLogsByDateRange } from '../data/DBFunctions'; // Firebase'den logları getiren fonksiyon
+import { fetchLogsByDateRange } from '../data/DBFunctions';
 
 export default function LogTable() {
   const [logs, setLogs] = useState([]);
@@ -9,55 +9,85 @@ export default function LogTable() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(12); // Sayfa başına gösterilecek öğe sayısı
+  const [itemsPerPage, setItemsPerPage] = useState(12);
+  const [searchTerm, setSearchTerm] = useState('');
   const totalItems = logs.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
+  const fetchLogs = (start, end) => {
+    setLoading(true);
+    setError('');
+    fetchLogsByDateRange(start, end)
+      .then((data) => {
+        setLogs(data);
+        if (data.length === 0) {
+          setError('Bu tarih aralığında kayıt bulunamadı.');
+        }
+      })
+      .catch((err) => {
+        setError('Veri çekerken bir hata oluştu: ' + err.message);
+      })
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
     if (startDate && endDate) {
-      setLoading(true);
-      setError('');
-      fetchLogsByDateRange(startDate, endDate)
-        .then((data) => {
-          setLogs(data);
-          if (data.length === 0) {
-            setError('Bu tarih aralığında kayıt bulunamadı.');
-          }
-        })
-        .catch((err) => {
-          setError('Veri çekerken bir hata oluştu: ' + err.message);
-        })
-        .finally(() => setLoading(false));
+      fetchLogs(startDate, endDate);
     }
   }, [startDate, endDate]);
+
+  const adjustStartAndEndDates = (start, end) => {
+    const adjustHour = (date, hour) => {
+      const d = new Date(date);
+      d.setHours(hour, 0, 0, 0);
+      return d;
+    };
+    return {
+      start: adjustHour(start, 2).toISOString(),
+      end: adjustHour(end, 2).toISOString(),
+    };
+  };
 
   const handleDateRangeChange = (range) => {
     const today = new Date();
     let start, end;
 
     if (range === 'daily') {
-      start = today.toISOString().split('T')[0].split('-').reverse().join('-') + ' - 00:00';
-      end = today.toISOString().split('T')[0].split('-').reverse().join('-') + ' - 23:59';
+      start = new Date(today);
+      end = new Date(today);
+      end.setDate(end.getDate() + 1);
     } else if (range === 'weekly') {
-      const lastWeek = new Date(today);
-      lastWeek.setDate(today.getDate() - 7);
-      start = lastWeek.toISOString().split('T')[0].split('-').reverse().join('-') + ' - 00:00';
-      end = today.toISOString().split('T')[0].split('-').reverse().join('-') + ' - 23:59';
+      const dayOfWeek = today.getDay();
+      start = new Date(today);
+      start.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
     } else if (range === 'monthly') {
-      const lastMonth = new Date(today);
-      lastMonth.setMonth(today.getMonth() - 1);
-      start = lastMonth.toISOString().split('T')[0].split('-').reverse().join('-') + ' - 00:00';
-      end = new Date().toISOString().split('T')[0].split('-').reverse().join('-') + ' - 23:59';
+      start = new Date(today.getFullYear(), today.getMonth(), 1);
+      end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    } else if (range === 'yearly') {
+      start = new Date(today.getFullYear(), 0, 1);
+      end = new Date(today.getFullYear(), 11, 31);
     }
 
-    setStartDate(start);
-    setEndDate(end);
-    setCurrentPage(1); // Sayfayı sıfırla
+    const adjustedDates = adjustStartAndEndDates(start, end);
+    setStartDate(adjustedDates.start);
+    setEndDate(adjustedDates.end);
+    setCurrentPage(1);
   };
 
-  const handleItemsPerPageChange = (e) => {
-    setItemsPerPage(parseInt(e.target.value)); // Kullanıcının seçtiği öğe sayısını ayarla
-    setCurrentPage(1); // Sayfayı sıfırla
+  const handleCustomRange = (customStartDate, customEndDate) => {
+    const adjustedStartDate = adjustStartAndEndDates(customStartDate, customStartDate).start;
+    const adjustedEndDate = adjustStartAndEndDates(customEndDate, customEndDate).end;
+    const endDateInclusive = new Date(adjustedEndDate);
+    endDateInclusive.setDate(endDateInclusive.getDate() + 1);
+
+    if (adjustedStartDate && endDateInclusive) {
+        setStartDate(adjustedStartDate);
+        setEndDate(endDateInclusive.toISOString());
+    } else {
+        setError('Geçersiz tarih aralığı.');
+    }
   };
 
   const TableRow = ({ tableName, action, amount, date, payment_method, cashier_name, products_sold }) => (
@@ -80,12 +110,10 @@ export default function LogTable() {
 
   const paginatedLogs = logs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Toplamları Hesapla
   const totalAmount = logs.reduce((sum, log) => sum + parseFloat(log.amount) || 0, 0);
   const totalCashAmount = logs.reduce((sum, log) => log.payment_method === 'Nakit' ? sum + parseFloat(log.amount) || 0 : sum, 0);
   const totalCreditAmount = logs.reduce((sum, log) => log.payment_method === 'Kredi Kartı' ? sum + parseFloat(log.amount) || 0 : sum, 0);
 
-  // Ürün bazında satış toplamları
   const productTotals = logs.reduce((totals, log) => {
     if (log.products_sold) {
       log.products_sold.forEach((product) => {
@@ -98,7 +126,10 @@ export default function LogTable() {
     return totals;
   }, {});
 
-  // Kasiyere göre toplamlar
+  const sortedProductTotals = Object.entries(productTotals)
+    .filter(([productName]) => productName.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => b[1] - a[1]);
+
   const cashierTotals = logs.reduce((totals, log) => {
     if (!totals[log.cashier_name]) {
       totals[log.cashier_name] = 0;
@@ -113,7 +144,6 @@ export default function LogTable() {
 
   return (
     <Row>
-      {/* 9 Kolonluk Kayıtlar Tablosu */}
       <Col md={9}>
         <Card border="light" className="table-wrapper table-responsive shadow-sm">
           <Card.Body className="pt-0">
@@ -122,20 +152,20 @@ export default function LogTable() {
                 <Button variant="primary" onClick={() => handleDateRangeChange('daily')}>Günlük</Button>
                 <Button variant="secondary" className="mx-2" onClick={() => handleDateRangeChange('weekly')}>Haftalık</Button>
                 <Button variant="success" onClick={() => handleDateRangeChange('monthly')}>Aylık</Button>
+                <Button variant="info" className="mx-2" onClick={() => handleDateRangeChange('yearly')}>Yıllık</Button>
               </div>
-              {/* Sayfa başına gösterilecek öğe sayısını seçmek için Form.Select */}
-              <Form.Select
-                size="sm"
-                style={{ width: 'auto' }}
-                value={itemsPerPage}
-                onChange={handleItemsPerPageChange}
-              >
-                <option value={5}>5 Kayıt</option>
-                <option value={10}>10 Kayıt</option>
-                <option value={12}>12 Kayıt</option>
-                <option value={20}>20 Kayıt</option>
-                <option value={50}>50 Kayıt</option>
-              </Form.Select>
+              <div>
+                <Form.Label>Tarihe Göre Filtrele:</Form.Label>
+                <Form.Control
+                  type="date"
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <Form.Control
+                  type="date"
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+                <Button variant="outline-primary" onClick={() => handleCustomRange(startDate, endDate)}>Filtrele</Button>
+              </div>
             </div>
             {loading ? (
               <p>Yükleniyor...</p>
@@ -159,7 +189,6 @@ export default function LogTable() {
                     {paginatedLogs.map((log, index) => <TableRow key={index} {...log} />)}
                   </tbody>
                 </Table>
-                {/* Sayfalama Kontrolleri */}
                 <Pagination className="mt-3">
                   {Array.from({ length: totalPages }, (_, index) => (
                     <Pagination.Item
@@ -176,37 +205,27 @@ export default function LogTable() {
           </Card.Body>
         </Card>
       </Col>
-
-      {/* 3 Kolonluk Toplamlar Tablosu */}
       <Col md={3}>
         <Card border="light" className="shadow-sm">
           <Card.Body>
             <h5>Toplamlar</h5>
             <Table className="table-borderless">
               <tbody>
-                <tr>
-                  <td><strong>Genel Toplam Tutar:</strong></td>
-                </tr>
-                <tr>
-                  <td>{totalAmount.toFixed(2)} TL</td>
-                </tr>
-                <tr>
-                  <td><strong>Nakit Toplam:</strong></td>
-                </tr>
-                <tr>
-                  <td>{totalCashAmount.toFixed(2)} TL</td>
-                </tr>
-                <tr>
-                  <td><strong>Kredi Kartı Toplam:</strong></td>
-                </tr>
-                <tr>
-                  <td>{totalCreditAmount.toFixed(2)} TL</td>
-                </tr>
+                <tr><td><strong>Genel Toplam Tutar:</strong></td><td>{totalAmount.toFixed(2)} TL</td></tr>
+                <tr><td><strong>Nakit Toplam:</strong></td><td>{totalCashAmount.toFixed(2)} TL</td></tr>
+                <tr><td><strong>Kredi Kartı Toplam:</strong></td><td>{totalCreditAmount.toFixed(2)} TL</td></tr>
               </tbody>
             </Table>
             <h6>Ürün Bazında Satışlar:</h6>
+            <Form.Control
+              type="text"
+              placeholder="Ürün adı ile arayın..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mb-3"
+            />
             <ul>
-              {Object.entries(productTotals).map(([product, quantity]) => (
+              {sortedProductTotals.map(([product, quantity]) => (
                 <li key={product}>{product}: {quantity} adet satıldı</li>
               ))}
             </ul>

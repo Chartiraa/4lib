@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Form, Row, Col } from '@themesberg/react-bootstrap';
-import { getOrders, getProducts, getTotal, setTotal, editTotal, addLog, delOrders, getTempPay, delTempPay, tempPay, getCurrentUserName, updateOrderQuantity } from "../data/DBFunctions";
+import { getOrders, getProducts, getPaidAmount, setPaidAmount, addLog, delOrders, getTempPay, delTempPay, tempPay, getCurrentUserName, updateOrderQuantity, delBaristaOrders } from "../data/DBFunctions";
 import Numpad from "./Numpad";
+import { set } from "firebase/database";
 
 export default (props) => {
     const { tableName, refresh, setRefresh, numpadValue, setNumpadValue, cashierName } = props;  // cashierName prop eklendi
@@ -12,29 +13,40 @@ export default (props) => {
     const [temp, setTemp] = useState({});
     const [totalAmount, setTotalAmount] = useState(0);
     const [paid, setPaid] = useState(0);
+    const [chart, setChart] = useState(0);
     const [remainder, setRemainder] = useState(0);
 
     useEffect(() => {
         getOrders(tableName).then(res => setOrders(res));
         getProducts().then(res => setProducts(res));
         getTempPay(tableName).then(res => setTemp(res));
+        getPaidAmount(tableName).then(res => {
+            if (res) {
+                setPaid(res.paid);
+            }
+        })
     }, [refresh]);
 
     useEffect(() => {
-        setTotalAmount(calcTotal(orders));
-    }, [orders, refresh]);
+        setChart(calcTotalTemp(temp));
+    }, [temp]);
 
-    const mergedData = Object.keys(temp).reduce((result, key) => {
-        if (orders[key]) {
-            result[key] = {
-                ...temp[key],
-                ...orders[key],
-            };
-        }
-        return result;
-    }, {});
+    useEffect(() => {
+        setRemainder(calcTotalOrders(orders) - paid);
+    }, [paid]);
 
-    const calcTotal = (orders) => {
+    useEffect(() => {
+        setTotalAmount(calcTotalOrders(orders));
+        setRemainder(calcTotalOrders(orders) - paid);
+    }, [orders]);
+
+    useEffect(() => {
+        setTotalAmount(0)
+        setPaid(0)
+        setRemainder(0)
+    }, [tableName]);
+
+    const calcTotalOrders = (orders) => {
         let total = 0;
         if (tableName !== "") {
             Object.values(orders).forEach(order => {
@@ -45,62 +57,72 @@ export default (props) => {
             });
         }
         if (total > 0) {
-            setRemainder(total);
-            setTotal({ tableName: tableName, total: total });
+            //setTotal({ tableName: tableName, total: total, remainder: total - paid, chart: chart });
+            return total;
+        }
+    };
+
+    const calcTotalTemp = (temp) => {
+        let total = 0;
+        if (tableName !== "") {
+            Object.values(temp).forEach(order => {
+                const product = products[order.productID];
+                if (product) {
+                    total += order.quantity * order.productPrice;
+                }
+            });
+        }
+        if (total > 0) {
+            setChart(total)
+            //setTotal({ tableName: tableName, total: totalAmount, remainder: remainder, chart: total });
             return total;
         } else {
-            setRemainder(0);
-            setPaid(0);
+            setChart(0);
             return total;
         }
     };
 
     const onClickAll = () => {
+
         // Tüm siparişler için tempPay fonksiyonunu tetikle ve ardından Orders tablosundan sil
         Object.keys(orders).forEach(orderID => {
             const order = orders[orderID];
 
-            // tempPay için gerekli tüm bilgileri ayarlayalım
-            const tempOrderData = {
-                orderID,
-                productID: order.productID,
-                productName: order.productName,
-                productPrice: products[order.productID]?.productPrice,
-                quantity: order.quantity,
-                productCategory: order.productCategory, // Kategori bilgisi
-                extraShot: order.extraShot || "Yok", // Ekstra shot bilgisi
-                syrupFlavor: order.syrupFlavor || "Yok", // Şurup çeşidi
-                syrupAmount: order.syrupAmount || "Tek", // Şurup miktarı
-                milkType: order.milkType || "Normal" // Süt tipi
-            };
+            if (order.paid !== order.quantity) {
 
-            // tempPay fonksiyonunu tableName ile birlikte çağır
-            tempPay(tableName, tempOrderData)
-                .then(() => {
-                    // Temp'e eklendikten sonra, Orders tablosundan siparişi sil
-                    delOrders({ tableName, orderID })
-                        .then(() => {
-                            setRefresh(refresh + 1); // Arayüzü yenile
+                // tempPay için gerekli tüm bilgileri ayarlayalım
+                const tempOrderData = {
+                    orderID,
+                    productID: order.productID,
+                    productName: order.productName,
+                    productPrice: order.productPrice,
+                    quantity: order.quantity - order.paid,
+                    productCategory: order.productCategory, // Kategori bilgisi
+                    extraShot: order.extraShot || "Yok", // Ekstra shot bilgisi
+                    syrupFlavor: order.syrupFlavor || "Yok", // Şurup çeşidi
+                    syrupAmount: order.syrupAmount || "Tek", // Şurup miktarı
+                    milkType: order.milkType || "Normal" // Süt tipi
+                };
 
-                            console.log(`Orders'tan silindi: Masa - ${tableName}, Sipariş - ${orderID}`);
-                        })
-                        .catch(error => {
-                            console.error("Orders'tan silme işlemi sırasında bir hata oluştu:", error);
-                        });
-                })
-                .catch(error => {
-                    console.error("TempPay işlemi sırasında bir hata oluştu:", error);
-                });
+                // tempPay fonksiyonunu tableName ile birlikte çağır
+                tempPay(tableName, tempOrderData)
+                    .then(() => {
+                        updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: order.quantity })
+                            .then(() => {
+                                setRefresh(refresh + 1);
+                            })
+                    })
+                    .catch(error => {
+                        console.error("TempPay işlemi sırasında bir hata oluştu:", error);
+                    });
+            }
         });
-
     };
-
-
 
     const handlePayment = (paymentMethod) => {
         const cashierName = getCurrentUserName(); // Kullanıcı adını al
         const productsSold = []; // Satılan ürünlerin tüm detaylarını tutacak dizi
-        let totalAmount = 0; // Toplam tutarı hesaplamak için değişken
+        let totalTempAmount = 0; // Toplam tutarı hesaplamak için değişken
 
         // getTempPay ile alınan tüm siparişler üzerinde işlem yap
         Object.keys(temp).forEach(tempKey => {
@@ -124,7 +146,7 @@ export default (props) => {
                 });
 
                 // Toplam tutarı artır
-                totalAmount += tempQuantity * parseFloat(tempOrder.productPrice);
+                totalTempAmount += tempQuantity * parseFloat(tempOrder.productPrice);
 
                 // TempPay tablosundan siparişi sil
                 delTempPay(tableName, tempOrder.orderID);
@@ -136,25 +158,38 @@ export default (props) => {
             addLog({
                 tableName: tableName,
                 action: paymentMethod, // `paymentMethod` dinamik olarak kullanılır
-                amount: totalAmount, // Toplam tutar
+                amount: totalTempAmount, // Toplam tutar
                 payment_method: paymentMethod,
                 cashier_name: cashierName,
                 products_sold: productsSold // Satılan ürünlerin tüm detayları
             });
         }
 
+        if (totalTempAmount + paid == totalAmount) {
+            Object.values(orders).forEach(order => {
+                delOrders({ tableName: tableName, orderID: order.orderID });
+                delBaristaOrders(tableName, order.orderID);
+            });
+            setPaidAmount({ tableName: tableName, paid: 0 });
+            setPaid(0);
+        } else {
+            setPaidAmount({ tableName: tableName, paid: totalTempAmount + paid });
+            setPaid(totalTempAmount);
+
+        }
+
         setNumpadValue("");
         setRefresh(refresh + 1);
     };
 
-
     return (
         <>
-            <h3>Toplam: {totalAmount}₺</h3>
+            <h1>Toplam: {totalAmount}₺</h1>
+            <h3>Kalan: {remainder}₺</h3>
             <h3>Ödenen: {paid}₺</h3>
-            <h1>Kalan: {remainder}₺</h1>
+            <h3>Sepet: {chart}₺</h3>
 
-            <Form.Control ref={numpad} required value={numpadValue} placeholder="Tahsil edilecek tutarı giriniz" style={{ marginBottom: "10px", marginTop: "10px" }} onChange={(e) => setNumpadValue(e.target.value)} />
+            {/*<Form.Control ref={numpad} required value={numpadValue} placeholder="Tahsil edilecek tutarı giriniz" style={{ marginBottom: "10px", marginTop: "10px" }} onChange={(e) => setNumpadValue(e.target.value)} />*/}
 
             <Row style={{ marginBottom: "10px" }}>
                 <Col className="p-0">
@@ -162,7 +197,7 @@ export default (props) => {
                 </Col>
             </Row>
 
-            <Numpad setNumpadValue={setNumpadValue} numpadValue={numpadValue} />
+            {/*<Numpad setNumpadValue={setNumpadValue} numpadValue={numpadValue} />*/}
 
             <Row style={{ marginTop: "10px" }}>
                 <Col className="p-0">
