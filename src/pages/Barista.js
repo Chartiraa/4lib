@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Pagination, Row, Col } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
-import { getBaristaOrders, delBaristaOrders } from "../data/DBFunctions";
+import { getBaristaOrders, delBaristaOrders, delBaristaOrdersAll } from "../data/DBFunctions";
 
 // Tarih formatını parse eden fonksiyon
 const parseDate = (dateString) => {
@@ -26,7 +26,7 @@ export default function BaristaTable() {
         console.log('Formatted orders:', res);
 
         // Siparişleri işleyip masa numarası ile formatlıyoruz
-        const formattedOrders = Object.entries(res).flatMap(([tableName, tableOrders]) => 
+        const formattedOrders = Object.entries(res).flatMap(([tableName, tableOrders]) =>
           Object.entries(tableOrders).map(([orderID, orderDetails]) => ({
             tableName, // Masa numarası
             orderID,
@@ -72,6 +72,27 @@ export default function BaristaTable() {
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
+  };
+
+  const delAllOrders = () => {
+    Swal.fire({
+      icon: "question",
+      title: "Tüm siparişler hazırlandı mi?",
+      showDenyButton: true,
+      confirmButtonText: "Evet",
+      denyButtonText: `Hayır`
+    }).then((result) => {
+      if (result.isConfirmed) {
+        delBaristaOrdersAll()
+          .then(() => {
+            setOrders([]);
+          })
+          .catch(error => {
+            console.error("Silme işlemi başarısız:", error);
+            Swal.fire("Hata", "Sipariş silinirken bir hata oluştu", "error");
+          });
+      }
+    });
   };
 
   return (
@@ -131,6 +152,7 @@ export default function BaristaTable() {
               </>
             )}
           </Card.Body>
+          <Button variant="danger" onClick={() => delAllOrders()}>Hepsini Sil!</Button>
         </Card>
       </Col>
     </Row>

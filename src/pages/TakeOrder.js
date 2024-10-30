@@ -153,6 +153,35 @@ export default () => {
         }
     };
 
+    const handleOrdertoCustomer = () => {
+        const fullOrderData = customerOrder.map(item => {
+            // productID ile ürün bilgilerini products objesinden bul
+            const product = products[item.id];
+            return {
+                productID: product.productID,  // productID doğrudan customerOrder'dan alınıyor
+                productName: product.productName,  // productName products state'inden bulunuyor
+                productPrice: product.productPrice,  // fiyat da products state'inden alınıyor
+                quantity: item.q,  // q = quantity (adet)
+                tableName: decodedTableName,  // masa adı
+                productCategory: product.productCategory,  // kategori bilgisi products state'inden
+                sugar: item.s || 'Yok',  // s = sugar (şeker seçimi)
+                extraShot: item.e === 'Evet' ? 'Evet' : 'Yok',  // e = extraShot, sadece 'Evet' varsa eklenir
+                syrupFlavor: item.f || 'Yok',  // f = syrupFlavor (şurup aroması)
+                syrupAmount: item.a || 'Tek',  // a = syrupAmount (şurup miktarı)
+                milkType: item.m || 'Normal'  // m = milkType (süt türü)
+            };
+        });
+
+        // Siparişleri addOrder fonksiyonuna gönderme
+        fullOrderData.forEach(order => addOrder(order).then(() => {
+            setRefresh(refresh + 1);
+        }));
+
+        setShowCustomerOrder(false);  // Modalı kapat
+        window.location.reload();  // Sayfayı yeniden yükle
+    };
+
+
     const moveTable = () => {
         getEmptyTables().then(tables => {
             setEmptyTables(tables);
@@ -270,20 +299,25 @@ export default () => {
                     <Modal.Title>Masa {decodedTableName} Sipariş Onayı</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                    {customerOrder.map((item, index) => (
-                        <div key={index}>
-                            <strong>{item.productName}</strong> - {item.quantity} adet - {item.productPrice} TL
-                            {item.sugar && <div>Şeker: {item.sugar}</div>}
-                            {item.extraShot && <div>Ekstra Shot: Evet</div>}
-                            {item.syrupFlavor && <div>Şurup: {item.syrupFlavor} ({item.syrupAmount} pompa)</div>}
-                            {item.milkType && <div>Süt Türü: {item.milkType}</div>}
-                        </div>
-                    ))}
+                    {customerOrder.map((item, index) => {
+                        // productID ile doğrudan products objesinden productName alınır
+                        const product = products[item.id];
+                        return (
+                            <div key={index}>
+                                <strong>{product ? product.productName : 'Ürün Bulunamadı'}</strong> - {item.q} adet
+                                {item.s && <div>Şeker: {item.s}</div>}
+                                {item.e && <div>Ekstra Shot: {item.e}</div>}
+                                {item.f && <div>Şurup: {item.f} ({item.a} pompa)</div>}
+                                {item.m && <div>Süt Türü: {item.m}</div>}
+                            </div>
+                        );
+                    })}
                 </Modal.Body>
                 <Modal.Footer>
                     <Button variant="primary" onClick={() => {
                         // Burada siparişi onaylayıp sisteme gönderebilirsiniz
                         console.log("Sipariş onaylandı:", customerOrder);
+                        handleOrdertoCustomer();
                     }}>
                         Onayla
                     </Button>
