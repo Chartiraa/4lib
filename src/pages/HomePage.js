@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Routes as AppRoutes, Route } from "react-router-dom";
 import { Routes } from "../routes";
 import ProtectedRoute from "../components/ProtectedRoute";
+import { useVersionCheck } from "../data/DBFunctions";
 
 // pages
 
@@ -104,6 +105,7 @@ const RouteWithSidebar = ({ component: Component }) => {
 };
 
 export default function App() {
+  useVersionCheck();
   return (
     <AppRoutes>
       {/* Public Routes */}

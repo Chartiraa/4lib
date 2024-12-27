@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faQrcode } from "@fortawesome/free-solid-svg-icons";
 import { Col, Row, Form, Button, Modal } from '@themesberg/react-bootstrap';
@@ -6,12 +6,15 @@ import { useParams } from "react-router-dom";
 import { ScrollPanel } from 'primereact/scrollpanel';
 import { Dialog } from 'primereact/dialog';
 
-import { getProducts, getCategories, addOrder, getEmptyTables, changeTableNumber } from "../data/DBFunctions";
+import { getProducts, getCategories, addOrder, getEmptyTables, changeTableNumber, useVersionCheck, getCurrentUserName } from "../data/DBFunctions";
 import { CategoryButton, ProductButton } from "../components/Widgets";
 import { Orders } from "../components/Tables";
 import QR from "../components/QR";
 
 export default () => {
+
+    useVersionCheck();
+
     const { tableName } = useParams();
     const decodedTableName = decodeURIComponent(tableName);
     const [visible, setVisible] = useState(false);
@@ -39,6 +42,8 @@ export default () => {
     const [quantity, setQuantity] = useState(1);
     const [kahveSecimi, setKahveSecimi] = useState('Sade');
     const [turkKahvesiModalVisible, setTurkKahvesiModalVisible] = useState(false);
+
+    const refWaiterNote = useRef("");
 
     // Seçili kategoriye göre ürünleri filtreleyin ve sıralayın
     const filteredProducts = selectedCategory ? Object.values(products)
@@ -133,7 +138,9 @@ export default () => {
             extraShot: extraShot,
             syrupFlavor: syrupFlavor,
             syrupAmount: syrupAmount,
-            milkType: milkType
+            milkType: milkType,
+            note: refWaiterNote.current.value,
+            employeeName: getCurrentUserName()
         }).then(() => {
             setRefresh(refresh + 1);
             setQuantity(1);
@@ -399,6 +406,12 @@ export default () => {
                             <Button variant="outline-primary" onClick={() => setQuantity(prev => prev + 1)}>+</Button>
                         </div>
                     </Form.Group>
+                    <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                        <Form.Label>Not</Form.Label>
+                        <div className="d-flex align-items-center justify-content-center">
+                            <Form.Control ref={refWaiterNote} required/>
+                        </div>
+                    </Form.Group>
                 </Modal.Body>
                 <Modal.Footer className="d-flex justify-content-center">
                     <Button variant="secondary" onClick={() => setTurkKahvesiModalVisible(false)}>İptal</Button>
@@ -480,6 +493,12 @@ export default () => {
                             <Button variant="outline-primary" onClick={() => setQuantity(prev => Math.max(1, prev - 1))}>-</Button>
                             <span className="mx-3">{quantity}</span>
                             <Button variant="outline-primary" onClick={() => setQuantity(prev => prev + 1)}>+</Button>
+                        </div>
+                    </Form.Group>
+                    <Form.Group className="mb-3 d-flex flex-column align-items-center">
+                        <Form.Label>Not</Form.Label>
+                        <div className="d-flex align-items-center justify-content-center">
+                            <Form.Control ref={refWaiterNote} required />
                         </div>
                     </Form.Group>
                 </Modal.Body>

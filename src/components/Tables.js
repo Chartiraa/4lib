@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faAngleDown, faAngleUp, faArrowDown, faArrowUp, faEdit, faCreditCard, faExternalLinkAlt, faTrashAlt, faBackward, faMinus, faPlus, faSort } from '@fortawesome/free-solid-svg-icons';
 import { Col, Row, Card, Image, Button, Table, Modal, ProgressBar, Form, Pagination, InputGroup } from '@themesberg/react-bootstrap';
@@ -8,7 +8,7 @@ import Swal from "sweetalert2";
 import { pageVisits, pageTraffic, pageRanking } from "../data/tables";
 import commands from "../data/commands";
 
-import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, getProductCategory, delOrders, delBaristaOrders, updateOrderQuantity, addBackToOrders, editTempPay, editOrders } from "../data/DBFunctions";
+import { getAccounts, editAccount, delAccount, getTables, delTable, getProducts, editProduct, delProduct, getCategories, editCategory, delCategory, getOrders, uploadImage, tempPay, getTempPay, getProductCategory, delOrders, editBaristaOrder, delBaristaOrders, updateOrderQuantity, addBackToOrders, editTempPay, editOrders } from "../data/DBFunctions";
 
 
 const ValueChange = ({ value, suffix }) => {
@@ -401,6 +401,7 @@ export const TablesTable = () => {
     </Card>
   );
 };
+
 export const ProductsTable = ({ refresh }) => {
   const [products, setProducts] = useState({});
   const [categories, setCategories] = useState([]);
@@ -797,12 +798,17 @@ export const EditOrderModal = ({ show, handleClose, orderData, handleSave }) => 
   const [syrupAmount, setSyrupAmount] = useState(orderData.syrupAmount || "Tek");
   const [milkType, setMilkType] = useState(orderData.milkType || "Normal");
 
+  const refWaiterNote = useRef("");
+
   // `isCoffeeCategory` doğrudan `orderData`'dan alınır
   const isCoffeeCategory = orderData.isCoffeeCategory;
 
   useEffect(() => {
     if (!show) {
       resetState();
+    }
+    if (refWaiterNote.current) {
+      refWaiterNote.current.value = typeof orderData.note === 'string' ? orderData.note : '';
     }
   }, [show, orderData]);
 
@@ -815,9 +821,11 @@ export const EditOrderModal = ({ show, handleClose, orderData, handleSave }) => 
   };
 
   const handleSaveClick = () => {
+    console.log("refWaiterNote.current.value:", refWaiterNote.current.value);
     const updatedOrder = {
       ...orderData,
       quantity,
+      note: refWaiterNote.current.value,
       ...(isCoffeeCategory && { extraShot, syrupFlavor, syrupAmount, milkType }) // Sadece kahve kategorisinde ek özellikleri ekleyin
     };
     handleSave(updatedOrder);
@@ -924,6 +932,12 @@ export const EditOrderModal = ({ show, handleClose, orderData, handleSave }) => 
             </Button>
           </div>
         </Form.Group>
+        <Form.Group className="mb-3 d-flex flex-column align-items-center">
+          <Form.Label>Not</Form.Label>
+          <div className="d-flex align-items-center justify-content-center">
+            <Form.Control ref={refWaiterNote} required />
+          </div>
+        </Form.Group>
       </Modal.Body>
       <Modal.Footer>
         <Button variant="secondary" onClick={handleClose}>
@@ -994,10 +1008,28 @@ export const Orders = (props) => {
       extraShot: updatedOrder.extraShot,
       syrupFlavor: updatedOrder.syrupFlavor,
       syrupAmount: updatedOrder.syrupAmount,
-      milkType: updatedOrder.milkType
+      milkType: updatedOrder.milkType,
+      note: updatedOrder.note
     }).then(() => {
       setRefresh(refresh + 1);
     });
+
+    editBaristaOrder({
+      tableName: tableName,
+      orderID: updatedOrder.orderID,
+      productID: updatedOrder.productID,
+      productName: updatedOrder.productName,
+      productPrice: updatedOrder.productPrice,
+      quantity: updatedOrder.quantity,
+      productCategory: productCategory, // Yeni kategori bilgisi
+      extraShot: updatedOrder.extraShot,
+      syrupFlavor: updatedOrder.syrupFlavor,
+      syrupAmount: updatedOrder.syrupAmount,
+      milkType: updatedOrder.milkType,
+      note: updatedOrder.note
+    }).then(() => {
+
+    })
   };
 
 
@@ -1070,6 +1102,7 @@ export const OrdersForPay = (props) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [quantityToPay, setQuantityToPay] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false); // Kilidi tutan state
 
   useEffect(() => {
     getOrders(tableName).then((res) => setOrders(res));
@@ -1092,11 +1125,15 @@ export const OrdersForPay = (props) => {
   };
 
   const handleConfirmPayment = (order, quantityToPay) => {
+    if (isProcessing) return; // Eğer zaten bir işlem çalışıyorsa fonksiyonu çalıştırma
+
+    setIsProcessing(true); // Kilidi aktif hale getir
     const { orderID, productName, productID, productPrice, quantity, extraShot, syrupFlavor, syrupAmount, milkType, productCategory, paid } = order;
 
-    // Eğer gerekli bilgiler eksikse, konsola hata yazdır ve işlemi durdur
+    // Eğer gerekli bilgiler eksikse, işlemi durdur ve kilidi serbest bırak
     if (!tableName || !orderID || !productID || !productName || !productPrice) {
       console.error("TempPay'e ekleme yapılırken eksik veri bulundu:", { tableName, orderID, productID, productName, productPrice });
+      setIsProcessing(false); // Kilidi serbest bırak
       return;
     }
 
@@ -1117,13 +1154,16 @@ export const OrdersForPay = (props) => {
         updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: paid + quantityToPay })
           .then(() => {
             setRefresh(refresh + 1);
+            setIsProcessing(false); // İşlem tamamlandıktan sonra kilidi serbest bırak
           })
           .catch((error) => {
             console.error("Sipariş miktarı güncellenemedi:", error);
+            setIsProcessing(false); // Hata durumunda da kilidi serbest bırak
           });
       })
       .catch((error) => {
         console.error("TempPay kaydedilemedi:", error);
+        setIsProcessing(false); // Hata durumunda da kilidi serbest bırak
       });
 
     setShowModal(false);
@@ -1133,7 +1173,29 @@ export const OrdersForPay = (props) => {
 
   const TableRow = ({ productName, productPrice, productID, quantity, orderID, paid, extraShot, syrupFlavor, syrupAmount, milkType }) => {
     return (
-      <tr style={{ cursor: "pointer", backgroundColor: paid == quantity ? '#39fd48' : paid == 0 ? 'transparent' : '#ffd100' }} onClick={() => handlePayClick({ orderID, productName, productID, productPrice, quantity, extraShot, syrupFlavor, syrupAmount, milkType, productCategory: orders[orderID]?.productCategory, paid })}>
+      <tr
+        style={{
+          cursor: isProcessing ? "not-allowed" : "pointer", // İşlem devam ederken tıklanamaz
+          backgroundColor: paid == quantity ? '#39fd48' : paid == 0 ? 'transparent' : '#ffd100'
+        }}
+        onClick={() => {
+          if (!isProcessing) { // Eğer bir işlem devam etmiyorsa tıkla
+            handlePayClick({
+              orderID,
+              productName,
+              productID,
+              productPrice,
+              quantity,
+              extraShot,
+              syrupFlavor,
+              syrupAmount,
+              milkType,
+              productCategory: orders[orderID]?.productCategory,
+              paid
+            });
+          }
+        }}
+      >
         <td>
           <span className="fw-normal">{productName}</span>
           <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>
@@ -1227,6 +1289,7 @@ export const OrdersForPaying = (props) => {
   const { refresh, setRefresh, numpadValue, setNumpadValue, tableName } = props;
   const [temp, setTemp] = useState({});
   const [orders, setOrders] = useState({});
+  const [isProcessingReturn, setIsProcessingReturn] = useState(false); // Kilidi tutan state
 
   useEffect(() => {
     getTempPay(tableName).then((tempData) => {  // tableName ile temp verilerini çek
@@ -1253,76 +1316,53 @@ export const OrdersForPaying = (props) => {
     return result;
   }, {});
 
-  // Toplam fiyat hesapla ve numpadValue'ye ata
-  useEffect(() => {
-    const totalPrice = Object.values(mergedData).reduce(
-      (sum, { productPrice, quantity }) => sum + parseFloat(productPrice) * parseInt(quantity),
-      0
-    );
-    setNumpadValue(totalPrice.toFixed(2)); // Toplam fiyatı numpadValue'ye aktar
-  }, [mergedData, setNumpadValue]);
-
   const handleReturnOrder = (order) => {
+    if (isProcessingReturn) return; // Eğer işlem devam ediyorsa tekrar çalıştırma
+
+    setIsProcessingReturn(true); // İşlem başladığında kilidi aktif hale getir
+
     const { orderID, productName, productPrice, quantity, productID, extraShot, syrupFlavor, syrupAmount, milkType } = order;
     const currentTempQuantity = parseInt(quantity, 10); // TempPay'deki mevcut miktar
 
-    // Eksik verileri kontrol et ve doldur
     const filledOrder = {
       orderID: orderID,
-      productID: productID || temp[orderID]?.productID || orders[orderID]?.productID,  // Temp veya Orders tablosundan al
-      productName: productName || temp[orderID]?.productName || orders[orderID]?.productName,  // Temp veya Orders tablosundan al
-      productPrice: productPrice || temp[orderID]?.productPrice || orders[orderID]?.productPrice,  // Temp veya Orders tablosundan al
-      quantity: 1,  // Geri eklenecek miktar daima 1 olacak
-      extraShot: extraShot || temp[orderID]?.extraShot || orders[orderID]?.extraShot || 'yok',  // Varsayılan değer
-      syrupFlavor: syrupFlavor || temp[orderID]?.syrupFlavor || orders[orderID]?.syrupFlavor || 'yok',  // Varsayılan değer
-      syrupAmount: syrupAmount || temp[orderID]?.syrupAmount || orders[orderID]?.syrupAmount || 'yok',  // Varsayılan değer
-      milkType: milkType || temp[orderID]?.milkType || orders[orderID]?.milkType || 'normal',  // Varsayılan değer
-      productCategory: orders[orderID]?.productCategory || temp[orderID]?.productCategory || '' // Kategori bilgisi ekle
+      productID: productID || temp[orderID]?.productID || orders[orderID]?.productID,
+      productName: productName || temp[orderID]?.productName || orders[orderID]?.productName,
+      productPrice: productPrice || temp[orderID]?.productPrice || orders[orderID]?.productPrice,
+      quantity: 1,
+      extraShot: extraShot || temp[orderID]?.extraShot || orders[orderID]?.extraShot || 'yok',
+      syrupFlavor: syrupFlavor || temp[orderID]?.syrupFlavor || orders[orderID]?.syrupFlavor || 'yok',
+      syrupAmount: syrupAmount || temp[orderID]?.syrupAmount || orders[orderID]?.syrupAmount || 'yok',
+      milkType: milkType || temp[orderID]?.milkType || orders[orderID]?.milkType || 'normal',
+      productCategory: orders[orderID]?.productCategory || temp[orderID]?.productCategory || ''
     };
 
-    // Eksik veya undefined alanlar hala varsa kontrol et
     if (!filledOrder.productID || !filledOrder.productName || !filledOrder.productPrice) {
       console.error("Eksik veya geçersiz sipariş bilgileri (doldurulmuş):", filledOrder);
-      return; // İşlemi durdur
+      setIsProcessingReturn(false); // Hata durumunda kilidi serbest bırak
+      return;
     }
 
-    // Orders tablosunda karşılık gelen siparişi bul
     const matchingOrder = orders[orderID];
 
     if (matchingOrder) {
-      const currentOrderQuantity = parseInt(matchingOrder.paid, 10); // Orders'taki mevcut miktar
+      const currentOrderQuantity = parseInt(matchingOrder.paid, 10);
 
-      // TempPay'deki miktarı 1 azalt ve Orders'taki miktarı 1 artır
       editTempPay(tableName, orderID, -1)
         .then(() => {
           updateOrderQuantity({ tableName: tableName, orderID: orderID, quantity: currentOrderQuantity - 1 })
             .then(() => {
               setRefresh(refresh + 1); // Arayüzü yenile
+              setIsProcessingReturn(false); // İşlem tamamlandı, kilidi serbest bırak
             })
             .catch((error) => {
               console.error("Orders tablosu güncellenemedi:", error);
+              setIsProcessingReturn(false); // Hata durumunda kilidi serbest bırak
             });
         })
         .catch((error) => {
           console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
-        });
-    } else {
-      // Eğer Orders tablosunda bu sipariş yoksa, yeni bir sipariş olarak ekle
-      const orderToAddBack = { ...filledOrder, quantity: 1 };  // `quantity`'yi elle 1 olarak ayarla
-
-      addBackToOrders({ tableName: tableName, order: orderToAddBack })
-        .then(() => {
-          // TempPay'den miktarı 1 azalt
-          editTempPay(tableName, orderID, -1)
-            .then(() => {
-              setRefresh(refresh + 1); // Arayüzü yenile
-            })
-            .catch((error) => {
-              console.error("editTempPay işlemi sırasında bir hata oluştu:", error);
-            });
-        })
-        .catch((error) => {
-          console.error("Orders tablosuna yeni sipariş eklenemedi:", error);
+          setIsProcessingReturn(false); // Hata durumunda kilidi serbest bırak
         });
     }
   };
@@ -1330,7 +1370,16 @@ export const OrdersForPaying = (props) => {
 
   const TableRow = ({ productName, productPrice, quantity, orderID, extraShot, syrupFlavor, syrupAmount, milkType }) => {
     return (
-      <tr onClick={() => handleReturnOrder({ productName, productPrice, quantity, orderID })}>
+      <tr
+        style={{
+          cursor: isProcessingReturn ? "not-allowed" : "pointer", // İşlem devam ederken tıklanamaz
+        }}
+        onClick={() => {
+          if (!isProcessingReturn) { // Eğer işlem devam etmiyorsa tıkla
+            handleReturnOrder({ productName, productPrice, quantity, orderID });
+          }
+        }}
+      >
         <td>
           <span className="fw-normal">{productName}</span>
           <ul className="list-unstyled mb-0" style={{ marginLeft: '10px', fontSize: '0.75em' }}>

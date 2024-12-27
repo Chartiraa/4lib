@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Pagination, Row, Col } from '@themesberg/react-bootstrap';
 import Swal from "sweetalert2";
-import { getBaristaOrders, delBaristaOrders, delBaristaOrdersAll } from "../data/DBFunctions";
+import { getBaristaOrders, delBaristaOrders, delBaristaOrdersAll, useVersionCheck } from "../data/DBFunctions";
 
 // Tarih formatını parse eden fonksiyon
 const parseDate = (dateString) => {
@@ -11,6 +11,9 @@ const parseDate = (dateString) => {
 };
 
 export default function BaristaTable() {
+
+  useVersionCheck();
+
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -111,7 +114,8 @@ export default function BaristaTable() {
                     <tr>
                       <th className="border-bottom">Masa Adı</th>
                       <th className="border-bottom">Ürün Adı</th>
-                      <th className="border-bottom">Fiyat</th>
+                      <th className="border-bottom">Not</th>
+                      {/*<th className="border-bottom">Fiyat</th>*/}
                       <th className="border-bottom">Adet</th>
                       <th className="border-bottom">Şeker</th>
                       <th className="border-bottom">Ekstra Shot</th>
@@ -126,7 +130,8 @@ export default function BaristaTable() {
                       <tr key={index} onClick={() => handleOrderReady(order)}>
                         <td>{order.tableName}</td>
                         <td>{order.productName}</td>
-                        <td>{order.productPrice} TL</td>
+                        <td>{order.note}</td>
+                        {/*<td>{order.productPrice} TL</td>*/}
                         <td>{order.quantity}</td>
                         <td>{order.sugar}</td>
                         <td>{order.extraShot || '-'}</td>

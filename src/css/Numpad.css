@@ -9,9 +9,12 @@
     justify-content: center;
   }
   
-  .numpad-button:active {
-    background-color: #d0d0d0; /* Tıklama anında buton rengi değişimi */
-  }
+  .numpad-button.active {
+    background-color: #ff9900; /* Mavi arka plan */
+    color: white; /* Beyaz yazı rengi */
+    border: 1px solid #ff9900; /* Daha koyu bir kenarlık */
+}
+
   
   .col {
     padding: 0; /* Sütunlar arasındaki boşluğu kaldırın */
